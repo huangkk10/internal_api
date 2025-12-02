@@ -1,0 +1,46 @@
+{
+  "login_response": {
+    "id": 150,
+    "name": "Chunwei.Huang",
+    "mail": "Chunwei.Huang@siliconmotion.com"
+  },
+  "project_sample": {
+    "key": "abc123",
+    "projectUid": "abc123",
+    "projectId": "proj-001",
+    "projectName": "Channel",
+    "productCategory": "Client_PCIe",
+    "customer": "ADATA",
+    "controller": "SM2508",
+    "subVersion": "AC",
+    "nand": "Micron B58R TLC",
+    "fw": "FWY1027A_PKGY1027V1",
+    "pl": "test.user",
+    "status": 0,
+    "visible": true,
+    "taskId": "SVDFWV-12345"
+  },
+  "projects_list": {
+    "page": 1,
+    "size": 50,
+    "total": 2,
+    "data": [
+      {
+        "key": "proj-1",
+        "projectUid": "proj-1",
+        "projectId": "proj-1",
+        "projectName": "Test Project 1",
+        "customer": "Customer A",
+        "controller": "SM2508"
+      },
+      {
+        "key": "proj-2",
+        "projectUid": "proj-2",
+        "projectId": "proj-2",
+        "projectName": "Test Project 2",
+        "customer": "Customer B",
+        "controller": "SM2269XT"
+      }
+    ]
+  }
+}

@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  internal-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: internal-api-server
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - SAF_BASE_URL=${SAF_BASE_URL:-https://saf.siliconmotion.com.tw}
+      - SAF_LOGIN_PORT=${SAF_LOGIN_PORT:-8000}
+      - SAF_API_PORT=${SAF_API_PORT:-3004}
+      - SAF_USERNAME=${SAF_USERNAME}
+      - SAF_PASSWORD=${SAF_PASSWORD}
+      - API_HOST=0.0.0.0
+      - API_PORT=8080
+      - DEBUG=${DEBUG:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    env_file:
+      - .env
+    networks:
+      - internal-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  internal-network:
+    driver: bridge
