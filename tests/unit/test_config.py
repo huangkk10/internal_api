@@ -2,6 +2,7 @@
 測試設定模組
 """
 
+import os
 import pytest
 from app.config import Settings
 
@@ -9,8 +10,14 @@ from app.config import Settings
 class TestSettings:
     """測試 Settings 類別"""
     
-    def test_default_values(self):
+    def test_default_values(self, monkeypatch):
         """測試預設值"""
+        # 清除環境變數避免影響測試
+        for key in ["SAF_BASE_URL", "SAF_LOGIN_PORT", "SAF_API_PORT", 
+                    "SAF_USERNAME", "SAF_PASSWORD", "API_HOST", "API_PORT",
+                    "DEBUG", "LOG_LEVEL"]:
+            monkeypatch.delenv(key, raising=False)
+        
         settings = Settings(
             _env_file=None  # 不讀取 .env 檔案
         )

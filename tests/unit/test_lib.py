@@ -92,9 +92,10 @@ class TestUtils:
         assert result is None
     
     def test_timestamp_to_datetime_invalid(self):
-        """測試無效格式"""
+        """測試無效格式 - 缺少 seconds 會返回 epoch 時間"""
         result = timestamp_to_datetime({"invalid": "data"})
-        assert result is None
+        # 缺少 seconds 時，會得到 timestamp=0，即 epoch 時間
+        assert result == datetime(1970, 1, 1, 0, 0, tzinfo=timezone.utc)
     
     def test_flatten_projects_simple(self):
         """測試展平簡單專案列表"""

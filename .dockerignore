@@ -24,8 +24,7 @@ docs/
 *.md
 !README.md
 
-# 測試
-tests/
+# 測試快取
 .pytest_cache/
 .coverage
 htmlcov/

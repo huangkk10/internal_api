@@ -18,6 +18,7 @@ RUN pip install --no-cache-dir --trusted-host pypi.org --trusted-host files.pyth
 # 複製應用程式碼
 COPY app/ ./app/
 COPY lib/ ./lib/
+COPY tests/ ./tests/
 
 # 暴露端口
 EXPOSE 8080

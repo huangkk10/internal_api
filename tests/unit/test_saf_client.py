@@ -22,29 +22,26 @@ class TestSAFClient:
     @pytest.mark.asyncio
     async def test_login_success(self, saf_client, mock_saf_login_response):
         """測試登入成功"""
-        mock_response = AsyncMock()
+        # 使用 MagicMock 而非 AsyncMock，因為 httpx 的 json() 是同步方法
+        mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = mock_saf_login_response
         
-        with patch.object(httpx.AsyncClient, 'post', return_value=mock_response):
-            with patch.object(httpx.AsyncClient, '__aenter__', return_value=AsyncMock(post=AsyncMock(return_value=mock_response))):
-                with patch.object(httpx.AsyncClient, '__aexit__', return_value=None):
-                    # 使用 patch 來模擬 _get_client
-                    mock_client = AsyncMock()
-                    mock_client.post.return_value = mock_response
-                    mock_client.__aenter__.return_value = mock_client
-                    mock_client.__aexit__.return_value = None
-                    
-                    with patch.object(saf_client, '_get_client', return_value=mock_client):
-                        result = await saf_client.login("test_user", "test_pass")
-                        
-                        assert result["id"] == 150
-                        assert result["name"] == "test_user"
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+        
+        with patch.object(saf_client, '_get_client', return_value=mock_client):
+            result = await saf_client.login("test_user", "test_pass")
+            
+            assert result["id"] == 150
+            assert result["name"] == "test_user"
     
     @pytest.mark.asyncio
     async def test_login_authentication_error(self, saf_client):
         """測試登入認證失敗"""
-        mock_response = AsyncMock()
+        mock_response = MagicMock()
         mock_response.status_code = 401
         mock_response.json.return_value = {"error": "Invalid credentials"}
         
@@ -60,7 +57,7 @@ class TestSAFClient:
     @pytest.mark.asyncio
     async def test_get_all_projects_success(self, saf_client, mock_saf_projects_response):
         """測試取得專案列表成功"""
-        mock_response = AsyncMock()
+        mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = mock_saf_projects_response
         
@@ -83,7 +80,7 @@ class TestSAFClient:
         """測試使用設定檔登入成功"""
         client = SAFClient(test_settings)
         
-        mock_response = AsyncMock()
+        mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = mock_saf_login_response
         
