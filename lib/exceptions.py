@@ -31,9 +31,15 @@ class SAFAuthenticationError(InternalAPIException):
 class SAFAPIError(InternalAPIException):
     """SAF API 呼叫錯誤"""
 
-    def __init__(self, message: str = "SAF API call failed", status_code: int = None):
+    def __init__(
+        self, 
+        message: str = "SAF API call failed", 
+        status_code: int = None,
+        error_code: str = "SAF_API_ERROR"
+    ):
         self.status_code = status_code
-        super().__init__(message=message, code="SAF_API_ERROR")
+        self.error_code = error_code
+        super().__init__(message=message, code=error_code)
 
 
 class ConfigurationError(InternalAPIException):

@@ -86,5 +86,49 @@ class HealthResponse(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="時間戳記")
 
 
+# ========== 專案測試摘要相關 ==========
+
+class TestResultCount(BaseModel):
+    """測試結果計數"""
+    pass_count: int = Field(0, alias="pass", description="通過數")
+    fail: int = Field(0, description="失敗數")
+    ongoing: int = Field(0, description="進行中")
+    cancel: int = Field(0, description="取消數")
+    check: int = Field(0, description="待確認數")
+    total: int = Field(0, description="總數")
+    pass_rate: float = Field(0.0, description="通過率 (%)")
+
+    class Config:
+        populate_by_name = True
+
+
+class CategoryResult(BaseModel):
+    """單一類別的測試結果"""
+    name: str = Field(..., description="類別名稱")
+    results_by_capacity: Dict[str, TestResultCount] = Field(
+        default_factory=dict,
+        description="各容量的測試結果"
+    )
+    total: TestResultCount = Field(
+        default_factory=TestResultCount,
+        description="該類別總計"
+    )
+
+
+class ProjectTestSummary(BaseModel):
+    """專案測試摘要"""
+    project_uid: str = Field(..., description="專案 UID")
+    project_name: str = Field(..., description="專案名稱")
+    capacities: List[str] = Field(default_factory=list, description="所有容量")
+    categories: List[CategoryResult] = Field(
+        default_factory=list,
+        description="各類別測試結果"
+    )
+    summary: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="總體統計"
+    )
+
+
 # 解決 Project 自我參照
 Project.model_rebuild()

@@ -73,6 +73,7 @@ docker-compose down
 | `/api/v1/auth/login-with-config` | POST | 使用設定檔登入 |
 | `/api/v1/projects` | GET | 取得專案列表 |
 | `/api/v1/projects/summary` | GET | 取得專案統計 |
+| `/api/v1/projects/{project_uid}/test-summary` | GET | 取得專案測試摘要 |
 
 ## 使用範例
 

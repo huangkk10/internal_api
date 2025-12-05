@@ -130,3 +130,35 @@ def auth_headers():
         "Authorization": "150",
         "Authorization-Name": "test_user"
     }
+
+
+@pytest.fixture
+def mock_project_test_summary_response():
+    """模擬 SAF 專案測試摘要回應"""
+    return {
+        "key": "test-project-uid-001",
+        "projectName": "Test Project Name",
+        "testResultByMainCategory": [
+            {
+                "mainCategory": "Compatibility",
+                "testResultByCapacity": [
+                    {"capacity": "512GB", "result": "8/0/0/0/0"},
+                    {"capacity": "1024GB", "result": "10/1/0/0/0"},
+                ]
+            },
+            {
+                "mainCategory": "Function",
+                "testResultByCapacity": [
+                    {"capacity": "512GB", "result": "15/2/1/0/0"},
+                    {"capacity": "1024GB", "result": "20/0/0/0/0"},
+                ]
+            },
+            {
+                "mainCategory": "Performance",
+                "testResultByCapacity": [
+                    {"capacity": "512GB", "result": "5/0/0/0/0"},
+                    {"capacity": "1024GB", "result": "6/0/1/0/0"},
+                ]
+            }
+        ]
+    }

@@ -94,3 +94,67 @@ EMPTY_PROJECTS_RESPONSE = {
     "total": 0,
     "data": []
 }
+
+
+# SAF 專案測試摘要回應 (實際 SAF API 結構)
+PROJECT_TEST_SUMMARY_RESPONSE = {
+    "projectId": "proj-001",
+    "projectName": "Test_Project_Name",
+    "fws": [
+        {
+            "projectUid": "test-project-uid-001",
+            "fwName": "FW_Version_1",
+            "subVersionName": "AA",
+            "internalSummary_1": {
+                "name": "[TEST-001][Test][Project][AA]",
+                "sampleUsedRate": "50%",
+                "totalTestItems": 10,
+                "passedCnt": 8,
+                "failedCnt": 2,
+                "completionRate": "100%"
+            },
+            "plans": [
+                {
+                    "testPlanName": "Test_Plan_1",
+                    "categoryItems": [
+                        {
+                            "categoryName": "Compatibility",
+                            "totalTestItems": 2,
+                            "sizeResult": [
+                                {"size": "512GB", "result": "8/0/0/0/0"},
+                                {"size": "1024GB", "result": "10/1/0/0/0"}
+                            ],
+                            "total": "18/1/0/0/0"
+                        },
+                        {
+                            "categoryName": "Function",
+                            "totalTestItems": 3,
+                            "sizeResult": [
+                                {"size": "512GB", "result": "13/2/1/0/0"},
+                                {"size": "1024GB", "result": "22/0/0/0/0"}
+                            ],
+                            "total": "35/2/1/0/0"
+                        },
+                        {
+                            "categoryName": "Performance",
+                            "totalTestItems": 2,
+                            "sizeResult": [
+                                {"size": "512GB", "result": "5/0/0/0/0"},
+                                {"size": "1024GB", "result": "6/0/1/0/0"}
+                            ],
+                            "total": "11/0/1/0/0"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
+
+
+# 空的專案測試摘要回應
+EMPTY_PROJECT_TEST_SUMMARY_RESPONSE = {
+    "projectId": "empty-proj",
+    "projectName": "Empty Project",
+    "fws": []
+}

@@ -108,3 +108,49 @@ class TestSAFClient:
             await client.login_with_config()
         
         assert "not configured" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_get_project_test_summary_success(
+        self, saf_client, mock_project_test_summary_response
+    ):
+        """測試取得專案測試摘要成功"""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = mock_project_test_summary_response
+        
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+        
+        with patch.object(saf_client, '_get_client', return_value=mock_client):
+            result = await saf_client.get_project_test_summary(
+                user_id=150,
+                username="test_user",
+                project_uid="test-project-uid-001"
+            )
+            
+            assert result["key"] == "test-project-uid-001"
+            assert result["projectName"] == "Test Project Name"
+            assert len(result["testResultByMainCategory"]) == 3
+
+    @pytest.mark.asyncio
+    async def test_get_project_test_summary_not_found(self, saf_client):
+        """測試取得專案測試摘要 - 專案不存在"""
+        mock_response = MagicMock()
+        mock_response.status_code = 404
+        
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+        
+        with patch.object(saf_client, '_get_client', return_value=mock_client):
+            with pytest.raises(SAFAPIError) as exc_info:
+                await saf_client.get_project_test_summary(
+                    user_id=150,
+                    username="test_user",
+                    project_uid="non-existent-uid"
+                )
+            
+            assert exc_info.value.error_code == "PROJECT_NOT_FOUND"

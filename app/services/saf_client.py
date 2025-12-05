@@ -180,6 +180,73 @@ class SAFClient(LoggerMixin):
             self.settings.saf_password
         )
 
+    @retry(max_attempts=3, delay=1.0, exceptions=(httpx.ConnectError, httpx.TimeoutException))
+    @log_execution
+    async def get_project_test_summary(
+        self,
+        user_id: int,
+        username: str,
+        project_uid: str
+    ) -> Dict[str, Any]:
+        """
+        取得單一專案的測試摘要
+        
+        Args:
+            user_id: 使用者 ID (從登入取得)
+            username: 使用者名稱 (從登入取得)
+            project_uid: 專案 UID
+            
+        Returns:
+            包含測試摘要的字典
+            
+        Raises:
+            SAFAPIError: API 呼叫失敗
+            SAFConnectionError: 連線失敗
+        """
+        url = f"{self.settings.saf_api_base_url}/project/listOneProjectSummary"
+        self.logger.debug(f"Getting project test summary from: {url}")
+        
+        headers = {
+            "Accept": "application/json, text/plain, */*",
+            "Content-Type": "application/json",
+            "Authorization": str(user_id),
+            "Authorization_name": username,
+        }
+        
+        try:
+            async with self._get_client() as client:
+                response = await client.post(
+                    url,
+                    headers=headers,
+                    json={
+                        "projectId": "",
+                        "projectUid": project_uid,
+                    },
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    self.logger.info(f"Retrieved test summary for project: {project_uid}")
+                    return data
+                elif response.status_code == 404:
+                    raise SAFAPIError(
+                        f"Project not found: {project_uid}",
+                        status_code=404,
+                        error_code="PROJECT_NOT_FOUND"
+                    )
+                else:
+                    raise SAFAPIError(
+                        f"Failed to get project test summary: {response.status_code}",
+                        status_code=response.status_code
+                    )
+                    
+        except httpx.ConnectError as e:
+            self.logger.error(f"Connection error: {e}")
+            raise SAFConnectionError(f"Failed to connect to SAF: {e}")
+        except httpx.TimeoutException as e:
+            self.logger.error(f"Timeout error: {e}")
+            raise SAFConnectionError(f"Connection timeout: {e}")
+
 
 # 建立預設客戶端實例
 saf_client = SAFClient()
