@@ -73,7 +73,12 @@ docker-compose down
 | `/api/v1/auth/login-with-config` | POST | 使用設定檔登入 |
 | `/api/v1/projects` | GET | 取得專案列表 |
 | `/api/v1/projects/summary` | GET | 取得專案統計 |
+| `/api/v1/projects/{project_id}/firmwares` | GET | 取得專案 Firmware 列表 |
 | `/api/v1/projects/{project_uid}/test-summary` | GET | 取得專案測試摘要 |
+| `/api/v1/projects/{project_uid}/firmware-summary` | GET | 取得 Firmware 詳細摘要 |
+| `/api/v1/projects/{project_uid}/full-summary` | GET | 取得完整專案摘要 |
+
+詳細 API 使用說明請參考 [docs/API.md](docs/API.md)。
 
 ## 使用範例
 
