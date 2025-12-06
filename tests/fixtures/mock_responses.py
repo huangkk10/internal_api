@@ -201,3 +201,68 @@ FWS_BY_PROJECT_ID_RESPONSE = {
 EMPTY_FWS_RESPONSE = {
     "fws": []
 }
+
+
+# SAF Firmware 詳細摘要回應 (完整的 listOneProjectSummary)
+FIRMWARE_SUMMARY_RESPONSE = {
+    "projectId": "8e9fe3fa43694a2c8a7cef9e42620f60",
+    "projectName": "Client_PCIe_Micron_Springsteen_SM2508_Micron B58R TLC",
+    "fws": [
+        {
+            "projectUid": "1de4830a914b42ffb92ddd201d7ca923",
+            "fwName": "G200X85A_OPAL",
+            "subVersionName": "AA",
+            "internalSummary_1": {
+                "name": "[SVDFWV-33916][Micron][Springsteen][SM2508][AA][Micron B58R TLC]",
+                "totalStmsSampleCount": 140,
+                "sampleUsedRate": "0%",
+                "totalTestItems": 61,
+                "passedCnt": 44,
+                "failedCnt": 16,
+                "completionRate": "61/61 (100%)",
+                "conditionalPassedCnt": 1
+            },
+            "internalSummary_2": {
+                "realTestCount": 61
+            },
+            "externalSummary": {
+                "totalSampleQuantity": 140,
+                "sampleUtilizationRate": "0/140 (0%)",
+                "passedCnt": 44,
+                "failedCnt": 16,
+                "sampleTestItemCompletionRate": "61/61 (100%)",
+                "sampleTestItemFailRate": "16/61 (26%)",
+                "testItemExecutionRate": "39/39 (100%)",
+                "testItemFailRate": "14/39 (36%)",
+                "conditionalPassedCnt": 1,
+                "itemPassedCnt": 25,
+                "itemFailedCnt": 14,
+                "totalItemCnt": 39
+            },
+            "plans": [
+                {
+                    "testPlanName": "Test_Plan_1",
+                    "categoryItems": [
+                        {
+                            "categoryName": "Compatibility",
+                            "totalTestItems": 10,
+                            "sizeResult": [
+                                {"size": "512GB", "result": "8/0/0/0/0"},
+                                {"size": "1024GB", "result": "10/1/0/0/0"}
+                            ],
+                            "total": "18/1/0/0/0"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
+
+
+# 空的 Firmware 詳細摘要回應
+EMPTY_FIRMWARE_SUMMARY_RESPONSE = {
+    "projectId": "empty-proj",
+    "projectName": "Empty Project",
+    "fws": []
+}

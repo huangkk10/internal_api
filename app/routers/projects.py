@@ -216,6 +216,259 @@ async def get_project_firmwares(
         )
 
 
+def _parse_percentage_string(pct_str: str) -> float:
+    """
+    解析百分比字串
+    
+    Args:
+        pct_str: 如 "61/61 (100%)" 或 "0%" 或 "100%"
+        
+    Returns:
+        百分比數值 (0.0 - 100.0)
+    """
+    if not pct_str:
+        return 0.0
+    
+    try:
+        # 嘗試找到括號內的百分比 "61/61 (100%)"
+        if "(" in pct_str and "%" in pct_str:
+            start = pct_str.rfind("(") + 1
+            end = pct_str.rfind("%")
+            return float(pct_str[start:end])
+        
+        # 直接是百分比 "100%" 或 "0%"
+        if "%" in pct_str:
+            return float(pct_str.replace("%", ""))
+        
+        return 0.0
+    except (ValueError, IndexError):
+        return 0.0
+
+
+def _parse_fraction_string(frac_str: str) -> tuple:
+    """
+    解析分數字串
+    
+    Args:
+        frac_str: 如 "0/140 (0%)" 或 "61/61 (100%)"
+        
+    Returns:
+        (numerator, denominator) 元組
+    """
+    if not frac_str:
+        return (0, 0)
+    
+    try:
+        # 取得分數部分 "0/140"
+        if "/" in frac_str:
+            frac_part = frac_str.split("(")[0].strip()
+            parts = frac_part.split("/")
+            return (int(parts[0]), int(parts[1]))
+        return (0, 0)
+    except (ValueError, IndexError):
+        return (0, 0)
+
+
+def _transform_firmware_summary(raw_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    將 SAF 原始資料轉換為 Firmware 詳細摘要格式
+    
+    SAF API 回傳結構：
+    {
+        "projectId": "...",
+        "projectName": "...",
+        "fws": [{
+            "projectUid": "...",
+            "fwName": "...",
+            "subVersionName": "...",
+            "internalSummary_1": {
+                "name": "...",
+                "totalStmsSampleCount": 140,
+                "sampleUsedRate": "0%",
+                "totalTestItems": 61,
+                "passedCnt": 44,
+                "failedCnt": 16,
+                "completionRate": "61/61 (100%)",
+                "conditionalPassedCnt": 1
+            },
+            "internalSummary_2": {
+                "realTestCount": 61
+            },
+            "externalSummary": {
+                "totalSampleQuantity": 140,
+                "sampleUtilizationRate": "0/140 (0%)",
+                "passedCnt": 44,
+                "failedCnt": 16,
+                "sampleTestItemCompletionRate": "61/61 (100%)",
+                "sampleTestItemFailRate": "16/61 (26%)",
+                "testItemExecutionRate": "39/39 (100%)",
+                "testItemFailRate": "14/39 (36%)",
+                "conditionalPassedCnt": 1,
+                "itemPassedCnt": 25,
+                "itemFailedCnt": 14,
+                "totalItemCnt": 39
+            }
+        }]
+    }
+    """
+    # 取得第一個 firmware 的資料
+    fws = raw_data.get("fws", [])
+    if not fws:
+        return {
+            "project_uid": "",
+            "fw_name": "",
+            "sub_version": "",
+            "task_name": "",
+            "overview": {
+                "total_test_items": 0,
+                "passed": 0,
+                "failed": 0,
+                "conditional_passed": 0,
+                "completion_rate": 0.0,
+                "pass_rate": 0.0
+            },
+            "sample_stats": {
+                "total_samples": 0,
+                "samples_used": 0,
+                "utilization_rate": 0.0
+            },
+            "test_item_stats": {
+                "total_items": 0,
+                "passed_items": 0,
+                "failed_items": 0,
+                "execution_rate": 0.0,
+                "fail_rate": 0.0
+            }
+        }
+    
+    fw = fws[0]
+    project_uid = fw.get("projectUid", "")
+    fw_name = fw.get("fwName", "")
+    sub_version = fw.get("subVersionName", "")
+    
+    # 解析 internalSummary_1
+    internal_1 = fw.get("internalSummary_1", {})
+    task_name = internal_1.get("name", "")
+    total_samples = internal_1.get("totalStmsSampleCount", 0)
+    sample_used_rate = _parse_percentage_string(internal_1.get("sampleUsedRate", "0%"))
+    total_test_items = internal_1.get("totalTestItems", 0)
+    passed_cnt = internal_1.get("passedCnt", 0)
+    failed_cnt = internal_1.get("failedCnt", 0)
+    completion_rate = _parse_percentage_string(internal_1.get("completionRate", "0%"))
+    conditional_passed = internal_1.get("conditionalPassedCnt", 0)
+    
+    # 計算通過率
+    total_tests = passed_cnt + failed_cnt
+    pass_rate = (passed_cnt / total_tests * 100) if total_tests > 0 else 0.0
+    
+    # 計算已使用樣本數
+    samples_used = int(total_samples * sample_used_rate / 100) if total_samples > 0 else 0
+    
+    # 解析 externalSummary
+    external = fw.get("externalSummary", {})
+    total_item_cnt = external.get("totalItemCnt", 0)
+    item_passed_cnt = external.get("itemPassedCnt", 0)
+    item_failed_cnt = external.get("itemFailedCnt", 0)
+    execution_rate = _parse_percentage_string(external.get("testItemExecutionRate", "0%"))
+    fail_rate = _parse_percentage_string(external.get("testItemFailRate", "0%"))
+    
+    return {
+        "project_uid": project_uid,
+        "fw_name": fw_name,
+        "sub_version": sub_version,
+        "task_name": task_name,
+        "overview": {
+            "total_test_items": total_test_items,
+            "passed": passed_cnt,
+            "failed": failed_cnt,
+            "conditional_passed": conditional_passed,
+            "completion_rate": round(completion_rate, 2),
+            "pass_rate": round(pass_rate, 2)
+        },
+        "sample_stats": {
+            "total_samples": total_samples,
+            "samples_used": samples_used,
+            "utilization_rate": round(sample_used_rate, 2)
+        },
+        "test_item_stats": {
+            "total_items": total_item_cnt,
+            "passed_items": item_passed_cnt,
+            "failed_items": item_failed_cnt,
+            "execution_rate": round(execution_rate, 2),
+            "fail_rate": round(fail_rate, 2)
+        }
+    }
+
+
+@router.get(
+    "/{project_uid}/firmware-summary",
+    response_model=APIResponse,
+    summary="取得 Firmware 詳細摘要"
+)
+async def get_firmware_summary(
+    project_uid: str,
+    auth: AuthInfo = Depends(get_auth_info),
+    client: SAFClient = Depends(get_saf_client)
+):
+    """
+    取得單一 Firmware 的詳細測試統計
+    
+    包含：
+    - **overview**: 總覽統計 (總測試項目、通過/失敗數、完成率、通過率)
+    - **sample_stats**: 樣本統計 (總樣本數、已使用數、利用率)
+    - **test_item_stats**: 測試項目統計 (項目數、執行率、失敗率)
+    
+    需要在 Header 中提供認證資訊：
+    - **Authorization**: 使用者 ID (從登入 API 取得)
+    - **Authorization-Name**: 使用者名稱 (從登入 API 取得)
+    """
+    try:
+        # 取得原始資料
+        raw_data = await client.get_project_test_summary(
+            user_id=auth.user_id,
+            username=auth.username,
+            project_uid=project_uid
+        )
+        
+        # 轉換為 Firmware 詳細摘要格式
+        result = _transform_firmware_summary(raw_data)
+        
+        return format_response(
+            success=True,
+            data=result
+        )
+        
+    except SAFAPIError as e:
+        if hasattr(e, 'error_code') and e.error_code == "PROJECT_NOT_FOUND":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=format_response(
+                    success=False,
+                    message=f"Project not found: {project_uid}",
+                    error_code="PROJECT_NOT_FOUND"
+                )
+            )
+        logger.error(f"SAF API error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=format_response(
+                success=False,
+                message=str(e),
+                error_code="SAF_API_ERROR"
+            )
+        )
+    except SAFConnectionError as e:
+        logger.error(f"SAF connection error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=format_response(
+                success=False,
+                message="Unable to connect to SAF server",
+                error_code="CONNECTION_ERROR"
+            )
+        )
+
+
 def _parse_result_string(result_str: str) -> Dict[str, int]:
     """
     解析結果字串
@@ -449,6 +702,214 @@ async def get_project_test_summary(
         
         # 轉換為友善格式
         result = _transform_test_summary(raw_data)
+        
+        return format_response(
+            success=True,
+            data=result
+        )
+        
+    except SAFAPIError as e:
+        if hasattr(e, 'error_code') and e.error_code == "PROJECT_NOT_FOUND":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=format_response(
+                    success=False,
+                    message=f"Project not found: {project_uid}",
+                    error_code="PROJECT_NOT_FOUND"
+                )
+            )
+        logger.error(f"SAF API error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=format_response(
+                success=False,
+                message=str(e),
+                error_code="SAF_API_ERROR"
+            )
+        )
+    except SAFConnectionError as e:
+        logger.error(f"SAF connection error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=format_response(
+                success=False,
+                message="Unable to connect to SAF server",
+                error_code="CONNECTION_ERROR"
+            )
+        )
+
+
+def _transform_firmware_detail(fw_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    將單一 Firmware 資料轉換為詳細格式
+    
+    Args:
+        fw_data: SAF API 回傳的單一 firmware 資料
+        
+    Returns:
+        FirmwareDetail 格式的字典
+    """
+    project_uid = fw_data.get("projectUid", "")
+    fw_name = fw_data.get("fwName", "")
+    sub_version = fw_data.get("subVersionName", "")
+    
+    # 解析 internalSummary_1
+    internal_1 = fw_data.get("internalSummary_1", {})
+    task_name = internal_1.get("name", "")
+    total_samples = internal_1.get("totalStmsSampleCount", 0)
+    sample_used_rate = _parse_percentage_string(internal_1.get("sampleUsedRate", "0%"))
+    total_test_items = internal_1.get("totalTestItems", 0)
+    passed = internal_1.get("passedCnt", 0)
+    failed = internal_1.get("failedCnt", 0)
+    conditional_passed = internal_1.get("conditionalPassedCnt", 0)
+    completion_rate = _parse_percentage_string(internal_1.get("completionRate", "0%"))
+    
+    # 解析 internalSummary_2
+    internal_2 = fw_data.get("internalSummary_2", {})
+    real_test_count = internal_2.get("realTestCount", 0)
+    
+    # 解析 externalSummary
+    external = fw_data.get("externalSummary", {})
+    total_sample_quantity = external.get("totalSampleQuantity", 0)
+    sample_utilization_rate = _parse_percentage_string(external.get("sampleUtilizationRate", "0%"))
+    ext_passed = external.get("passedCnt", 0)
+    ext_failed = external.get("failedCnt", 0)
+    sample_completion_rate = _parse_percentage_string(external.get("sampleTestItemCompletionRate", "0%"))
+    sample_fail_rate = _parse_percentage_string(external.get("sampleTestItemFailRate", "0%"))
+    execution_rate = _parse_percentage_string(external.get("testItemExecutionRate", "0%"))
+    item_fail_rate = _parse_percentage_string(external.get("testItemFailRate", "0%"))
+    item_passed = external.get("itemPassedCnt", 0)
+    item_failed = external.get("itemFailedCnt", 0)
+    total_items = external.get("totalItemCnt", 0)
+    
+    return {
+        "project_uid": project_uid,
+        "fw_name": fw_name,
+        "sub_version": sub_version,
+        "internal_summary": {
+            "task_name": task_name,
+            "total_samples": total_samples,
+            "sample_used_rate": round(sample_used_rate, 2),
+            "total_test_items": total_test_items,
+            "passed": passed,
+            "failed": failed,
+            "conditional_passed": conditional_passed,
+            "completion_rate": round(completion_rate, 2),
+            "real_test_count": real_test_count
+        },
+        "external_summary": {
+            "total_sample_quantity": total_sample_quantity,
+            "sample_utilization_rate": round(sample_utilization_rate, 2),
+            "passed": ext_passed,
+            "failed": ext_failed,
+            "sample_completion_rate": round(sample_completion_rate, 2),
+            "sample_fail_rate": round(sample_fail_rate, 2),
+            "execution_rate": round(execution_rate, 2),
+            "item_fail_rate": round(item_fail_rate, 2),
+            "item_passed": item_passed,
+            "item_failed": item_failed,
+            "total_items": total_items
+        }
+    }
+
+
+def _aggregate_firmware_stats(firmwares: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    聚合所有 Firmware 的統計數據
+    
+    Args:
+        firmwares: Firmware 詳細資料列表
+        
+    Returns:
+        聚合統計字典
+    """
+    total_test_items = 0
+    total_passed = 0
+    total_failed = 0
+    total_conditional_passed = 0
+    
+    for fw in firmwares:
+        internal = fw.get("internal_summary", {})
+        total_test_items += internal.get("total_test_items", 0)
+        total_passed += internal.get("passed", 0)
+        total_failed += internal.get("failed", 0)
+        total_conditional_passed += internal.get("conditional_passed", 0)
+    
+    # 計算通過率 (不含條件通過)
+    total_tests = total_passed + total_failed
+    overall_pass_rate = (total_passed / total_tests * 100) if total_tests > 0 else 0.0
+    
+    return {
+        "total_test_items": total_test_items,
+        "total_passed": total_passed,
+        "total_failed": total_failed,
+        "total_conditional_passed": total_conditional_passed,
+        "overall_pass_rate": round(overall_pass_rate, 2)
+    }
+
+
+def _transform_full_summary(raw_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    將 SAF 原始資料轉換為完整專案摘要格式
+    
+    Args:
+        raw_data: SAF API 回傳的原始資料
+        
+    Returns:
+        FullProjectSummary 格式的字典
+    """
+    project_id = raw_data.get("projectId", "")
+    project_name = raw_data.get("projectName", "")
+    fws = raw_data.get("fws", [])
+    
+    # 轉換所有 Firmware 資料
+    firmwares = [_transform_firmware_detail(fw) for fw in fws]
+    
+    # 聚合統計
+    aggregated_stats = _aggregate_firmware_stats(firmwares)
+    
+    return {
+        "project_id": project_id,
+        "project_name": project_name,
+        "total_firmwares": len(firmwares),
+        "firmwares": firmwares,
+        "aggregated_stats": aggregated_stats
+    }
+
+
+@router.get(
+    "/{project_uid}/full-summary",
+    response_model=APIResponse,
+    summary="取得完整專案摘要"
+)
+async def get_full_project_summary(
+    project_uid: str,
+    auth: AuthInfo = Depends(get_auth_info),
+    client: SAFClient = Depends(get_saf_client)
+):
+    """
+    取得專案的完整摘要，包含所有 Firmware 的詳細統計資訊
+    
+    包含：
+    - **firmwares**: 所有 Firmware 的詳細資料
+        - **internal_summary**: 內部摘要 (樣本數、測試項目數、通過/失敗數等)
+        - **external_summary**: 外部摘要 (執行率、失敗率等)
+    - **aggregated_stats**: 聚合統計 (所有 Firmware 的總計)
+    
+    需要在 Header 中提供認證資訊：
+    - **Authorization**: 使用者 ID (從登入 API 取得)
+    - **Authorization-Name**: 使用者名稱 (從登入 API 取得)
+    """
+    try:
+        # 取得原始資料
+        raw_data = await client.get_project_test_summary(
+            user_id=auth.user_id,
+            username=auth.username,
+            project_uid=project_uid
+        )
+        
+        # 轉換為完整專案摘要格式
+        result = _transform_full_summary(raw_data)
         
         return format_response(
             success=True,

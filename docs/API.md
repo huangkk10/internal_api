@@ -289,6 +289,253 @@ curl http://localhost:8080/api/v1/projects/00e11fc25a3f454e9e3860ff67dd2c07/test
 
 ---
 
+### 7. 取得 Firmware 詳細摘要
+
+取得單一 Firmware 的詳細測試統計資訊。
+
+```
+GET /api/v1/projects/{project_uid}/firmware-summary
+```
+
+**Path 參數:**
+| 參數 | 類型 | 說明 |
+|------|------|------|
+| `project_uid` | string | 專案 UID (從 Firmware 列表取得) |
+
+**Headers:**
+- `Authorization`: 使用者 ID
+- `Authorization-Name`: 使用者名稱
+
+**回應範例:**
+```json
+{
+  "success": true,
+  "data": {
+    "project_uid": "1de4830a914b42ffb92ddd201d7ca923",
+    "fw_name": "G200X85A_OPAL",
+    "sub_version": "AA",
+    "task_name": "[SVDFWV-33916][Micron][Springsteen][SM2508][AA][Micron B58R TLC]",
+    "overview": {
+      "total_test_items": 61,
+      "passed": 44,
+      "failed": 16,
+      "conditional_passed": 1,
+      "completion_rate": 100.0,
+      "pass_rate": 73.33
+    },
+    "sample_stats": {
+      "total_samples": 140,
+      "samples_used": 0,
+      "utilization_rate": 0.0
+    },
+    "test_item_stats": {
+      "total_items": 39,
+      "passed_items": 25,
+      "failed_items": 14,
+      "execution_rate": 100.0,
+      "fail_rate": 36.0
+    }
+  },
+  "message": null,
+  "timestamp": "2025-12-07T10:00:00Z"
+}
+```
+
+**回應欄位說明:**
+
+| 區塊 | 欄位 | 說明 |
+|------|------|------|
+| **overview** | `total_test_items` | 總測試項目數 |
+| | `passed` | 通過數 |
+| | `failed` | 失敗數 |
+| | `conditional_passed` | 條件通過數 |
+| | `completion_rate` | 完成率 (%) |
+| | `pass_rate` | 通過率 (%) |
+| **sample_stats** | `total_samples` | 總樣本數 |
+| | `samples_used` | 已使用樣本數 |
+| | `utilization_rate` | 樣本利用率 (%) |
+| **test_item_stats** | `total_items` | 總測試項目數 |
+| | `passed_items` | 通過項目數 |
+| | `failed_items` | 失敗項目數 |
+| | `execution_rate` | 執行率 (%) |
+| | `fail_rate` | 失敗率 (%) |
+
+**cURL 範例:**
+```bash
+curl http://localhost:8080/api/v1/projects/1de4830a914b42ffb92ddd201d7ca923/firmware-summary \
+  -H "Authorization: 150" \
+  -H "Authorization-Name: your_username"
+```
+
+---
+
+### 8. 取得專案 Firmware 列表
+
+依 Project ID 取得該專案下所有的 Firmware 版本列表。
+
+```
+GET /api/v1/projects/{project_id}/firmwares
+```
+
+**Path 參數:**
+| 參數 | 類型 | 說明 |
+|------|------|------|
+| `project_id` | string | 專案 ID (從專案列表取得) |
+
+**Headers:**
+- `Authorization`: 使用者 ID
+- `Authorization-Name`: 使用者名稱
+
+**回應範例:**
+```json
+{
+  "success": true,
+  "data": {
+    "fws": [
+      {
+        "fw": "MASTX9KA",
+        "subVersion": "AA",
+        "projectUid": "5d5b7d9763fb45bda79579f85a9a02f5"
+      },
+      {
+        "fw": "G200X9R1",
+        "subVersion": "AA",
+        "projectUid": "52fbea8419254b6b8f7a0e361e73ec03"
+      }
+    ]
+  },
+  "message": null,
+  "timestamp": "2025-12-07T10:00:00Z"
+}
+```
+
+**cURL 範例:**
+```bash
+curl http://localhost:8080/api/v1/projects/8e9fe3fa43694a2c8a7cef9e42620f60/firmwares \
+  -H "Authorization: 150" \
+  -H "Authorization-Name: your_username"
+```
+
+---
+
+### 9. 取得完整專案摘要
+
+取得專案的完整摘要，包含所有 Firmware 的詳細統計資訊與聚合統計。
+
+```
+GET /api/v1/projects/{project_uid}/full-summary
+```
+
+**Path 參數:**
+| 參數 | 類型 | 說明 |
+|------|------|------|
+| `project_uid` | string | 專案 UID (從專案列表取得) |
+
+**Headers:**
+- `Authorization`: 使用者 ID
+- `Authorization-Name`: 使用者名稱
+
+**回應範例:**
+```json
+{
+  "success": true,
+  "data": {
+    "project_id": "12345",
+    "project_name": "YMTC 232L TLC BIC5 B27B",
+    "total_firmwares": 2,
+    "firmwares": [
+      {
+        "project_uid": "1de4830a914b42ffb92ddd201d7ca923",
+        "fw_name": "G200X85A",
+        "sub_version": "AA",
+        "internal_summary": {
+          "task_name": "[SVDFWV-33916][Micron][Springsteen][SM2508][AA]",
+          "total_samples": 140,
+          "sample_used_rate": 50.0,
+          "total_test_items": 61,
+          "passed": 44,
+          "failed": 16,
+          "conditional_passed": 1,
+          "completion_rate": 100.0,
+          "real_test_count": 60
+        },
+        "external_summary": {
+          "total_sample_quantity": 140,
+          "sample_utilization_rate": 50.0,
+          "passed": 100,
+          "failed": 20,
+          "sample_completion_rate": 85.71,
+          "sample_fail_rate": 14.29,
+          "execution_rate": 100.0,
+          "item_fail_rate": 26.23,
+          "item_passed": 45,
+          "item_failed": 16,
+          "total_items": 61
+        }
+      },
+      {
+        "project_uid": "2de4830a914b42ffb92ddd201d7ca924",
+        "fw_name": "G200X86A",
+        "sub_version": "AB",
+        "internal_summary": { "..." : "..." },
+        "external_summary": { "..." : "..." }
+      }
+    ],
+    "aggregated_stats": {
+      "total_test_items": 122,
+      "total_passed": 88,
+      "total_failed": 32,
+      "total_conditional_passed": 2,
+      "overall_pass_rate": 73.33
+    }
+  },
+  "message": null,
+  "timestamp": "2025-12-07T10:00:00Z"
+}
+```
+
+**回應欄位說明:**
+
+| 區塊 | 欄位 | 說明 |
+|------|------|------|
+| **根層級** | `project_id` | 專案 ID |
+| | `project_name` | 專案名稱 |
+| | `total_firmwares` | Firmware 總數 |
+| **internal_summary** | `task_name` | 任務名稱 |
+| | `total_samples` | STMS 總樣本數 |
+| | `sample_used_rate` | 樣本使用率 (%) |
+| | `total_test_items` | 總測試項目數 |
+| | `passed` | 通過數 |
+| | `failed` | 失敗數 |
+| | `conditional_passed` | 條件通過數 |
+| | `completion_rate` | 完成率 (%) |
+| | `real_test_count` | 實際測試數 |
+| **external_summary** | `total_sample_quantity` | 總樣本數量 |
+| | `sample_utilization_rate` | 樣本利用率 (%) |
+| | `passed` | 樣本通過數 |
+| | `failed` | 樣本失敗數 |
+| | `sample_completion_rate` | 樣本完成率 (%) |
+| | `sample_fail_rate` | 樣本失敗率 (%) |
+| | `execution_rate` | 測試項目執行率 (%) |
+| | `item_fail_rate` | 測試項目失敗率 (%) |
+| | `item_passed` | 項目通過數 |
+| | `item_failed` | 項目失敗數 |
+| | `total_items` | 總項目數 |
+| **aggregated_stats** | `total_test_items` | 所有 FW 測試項目總和 |
+| | `total_passed` | 所有 FW 通過總數 |
+| | `total_failed` | 所有 FW 失敗總數 |
+| | `total_conditional_passed` | 所有 FW 條件通過總數 |
+| | `overall_pass_rate` | 整體通過率 (%) |
+
+**cURL 範例:**
+```bash
+curl http://localhost:8080/api/v1/projects/00e11fc25a3f454e9e3860ff67dd2c07/full-summary \
+  -H "Authorization: 150" \
+  -H "Authorization-Name: your_username"
+```
+
+---
+
 ## 錯誤回應
 
 所有錯誤都會返回統一的格式：

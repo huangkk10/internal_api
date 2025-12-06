@@ -130,5 +130,123 @@ class ProjectTestSummary(BaseModel):
     )
 
 
+# ========== Firmware 詳細摘要相關 ==========
+
+class OverviewStats(BaseModel):
+    """總覽統計"""
+    total_test_items: int = Field(0, description="總測試項目數")
+    passed: int = Field(0, description="通過數")
+    failed: int = Field(0, description="失敗數")
+    conditional_passed: int = Field(0, description="條件通過數")
+    completion_rate: float = Field(0.0, description="完成率 (%)")
+    pass_rate: float = Field(0.0, description="通過率 (%)")
+
+
+class SampleStats(BaseModel):
+    """樣本統計"""
+    total_samples: int = Field(0, description="總樣本數")
+    samples_used: int = Field(0, description="已使用樣本數")
+    utilization_rate: float = Field(0.0, description="樣本利用率 (%)")
+
+
+class TestItemStats(BaseModel):
+    """測試項目統計"""
+    total_items: int = Field(0, description="總測試項目數")
+    passed_items: int = Field(0, description="通過項目數")
+    failed_items: int = Field(0, description="失敗項目數")
+    execution_rate: float = Field(0.0, description="執行率 (%)")
+    fail_rate: float = Field(0.0, description="失敗率 (%)")
+
+
+class FirmwareSummary(BaseModel):
+    """Firmware 詳細摘要"""
+    project_uid: str = Field(..., description="專案 UID")
+    fw_name: str = Field(..., description="Firmware 名稱")
+    sub_version: str = Field(..., description="子版本")
+    task_name: str = Field("", description="任務名稱")
+    
+    overview: OverviewStats = Field(
+        default_factory=OverviewStats,
+        description="總覽統計"
+    )
+    sample_stats: SampleStats = Field(
+        default_factory=SampleStats,
+        description="樣本統計"
+    )
+    test_item_stats: TestItemStats = Field(
+        default_factory=TestItemStats,
+        description="測試項目統計"
+    )
+
+
+# ========== 完整專案摘要相關 ==========
+
+class InternalSummary(BaseModel):
+    """內部摘要"""
+    task_name: str = Field("", description="任務名稱")
+    total_samples: int = Field(0, description="總樣本數")
+    sample_used_rate: float = Field(0.0, description="樣本使用率 (%)")
+    total_test_items: int = Field(0, description="總測試項目數")
+    passed: int = Field(0, description="通過數")
+    failed: int = Field(0, description="失敗數")
+    conditional_passed: int = Field(0, description="條件通過數")
+    completion_rate: float = Field(0.0, description="完成率 (%)")
+    real_test_count: int = Field(0, description="實際測試數")
+
+
+class ExternalSummary(BaseModel):
+    """外部摘要"""
+    total_sample_quantity: int = Field(0, description="總樣本數量")
+    sample_utilization_rate: float = Field(0.0, description="樣本利用率 (%)")
+    passed: int = Field(0, description="通過的樣本測試項目數")
+    failed: int = Field(0, description="失敗的樣本測試項目數")
+    sample_completion_rate: float = Field(0.0, description="樣本測試項目完成率 (%)")
+    sample_fail_rate: float = Field(0.0, description="樣本測試項目失敗率 (%)")
+    execution_rate: float = Field(0.0, description="測試項目執行率 (%)")
+    item_fail_rate: float = Field(0.0, description="測試項目失敗率 (%)")
+    item_passed: int = Field(0, description="通過的測試項目數")
+    item_failed: int = Field(0, description="失敗的測試項目數")
+    total_items: int = Field(0, description="總測試項目數")
+
+
+class FirmwareDetail(BaseModel):
+    """Firmware 完整詳細資料"""
+    project_uid: str = Field(..., description="專案 UID")
+    fw_name: str = Field(..., description="Firmware 名稱")
+    sub_version: str = Field(..., description="子版本")
+    internal_summary: InternalSummary = Field(
+        default_factory=InternalSummary,
+        description="內部摘要"
+    )
+    external_summary: ExternalSummary = Field(
+        default_factory=ExternalSummary,
+        description="外部摘要"
+    )
+
+
+class AggregatedStats(BaseModel):
+    """聚合統計"""
+    total_test_items: int = Field(0, description="總測試項目數")
+    total_passed: int = Field(0, description="總通過數")
+    total_failed: int = Field(0, description="總失敗數")
+    total_conditional_passed: int = Field(0, description="總條件通過數")
+    overall_pass_rate: float = Field(0.0, description="整體通過率 (%)")
+
+
+class FullProjectSummary(BaseModel):
+    """完整專案摘要"""
+    project_id: str = Field(..., description="專案 ID")
+    project_name: str = Field(..., description="專案名稱")
+    total_firmwares: int = Field(0, description="Firmware 總數")
+    firmwares: List[FirmwareDetail] = Field(
+        default_factory=list,
+        description="所有 Firmware 詳細資料"
+    )
+    aggregated_stats: AggregatedStats = Field(
+        default_factory=AggregatedStats,
+        description="聚合統計"
+    )
+
+
 # 解決 Project 自我參照
 Project.model_rebuild()
