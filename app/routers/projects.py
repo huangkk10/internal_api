@@ -151,6 +151,71 @@ async def get_projects_summary(
         )
 
 
+@router.get(
+    "/{project_id}/firmwares",
+    response_model=APIResponse,
+    summary="取得專案的 Firmware 列表"
+)
+async def get_project_firmwares(
+    project_id: str,
+    auth: AuthInfo = Depends(get_auth_info),
+    client: SAFClient = Depends(get_saf_client)
+):
+    """
+    依 Project ID 取得該專案下所有的 Firmware 版本列表
+    
+    回傳每個 firmware 的:
+    - **fw**: Firmware 名稱 (如 MASTX9KA, G200X9R1)
+    - **subVersion**: 子版本 (如 AA)
+    - **projectUid**: 對應的 Project UID
+    
+    需要在 Header 中提供認證資訊：
+    - **Authorization**: 使用者 ID (從登入 API 取得)
+    - **Authorization-Name**: 使用者名稱 (從登入 API 取得)
+    """
+    try:
+        result = await client.get_fws_by_project_id(
+            user_id=auth.user_id,
+            username=auth.username,
+            project_id=project_id
+        )
+        
+        return format_response(
+            success=True,
+            data=result
+        )
+        
+    except SAFAPIError as e:
+        if hasattr(e, 'error_code') and e.error_code == "PROJECT_NOT_FOUND":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=format_response(
+                    success=False,
+                    message=f"Project not found: {project_id}",
+                    error_code="PROJECT_NOT_FOUND"
+                )
+            )
+        logger.error(f"SAF API error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=format_response(
+                success=False,
+                message=str(e),
+                error_code="SAF_API_ERROR"
+            )
+        )
+    except SAFConnectionError as e:
+        logger.error(f"SAF connection error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=format_response(
+                success=False,
+                message="Unable to connect to SAF server",
+                error_code="CONNECTION_ERROR"
+            )
+        )
+
+
 def _parse_result_string(result_str: str) -> Dict[str, int]:
     """
     解析結果字串

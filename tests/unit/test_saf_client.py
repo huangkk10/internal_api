@@ -154,3 +154,72 @@ class TestSAFClient:
                 )
             
             assert exc_info.value.error_code == "PROJECT_NOT_FOUND"
+
+    @pytest.mark.asyncio
+    async def test_get_fws_by_project_id_success(
+        self, saf_client, mock_fws_by_project_id_response
+    ):
+        """測試取得 Firmware 列表成功"""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = mock_fws_by_project_id_response
+        
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+        
+        with patch.object(saf_client, '_get_client', return_value=mock_client):
+            result = await saf_client.get_fws_by_project_id(
+                user_id=150,
+                username="test_user",
+                project_id="8e9fe3fa43694a2c8a7cef9e42620f60"
+            )
+            
+            assert "fws" in result
+            assert len(result["fws"]) == 3
+            assert result["fws"][0]["fw"] == "MASTX9KA"
+            assert result["fws"][0]["subVersion"] == "AA"
+
+    @pytest.mark.asyncio
+    async def test_get_fws_by_project_id_not_found(self, saf_client):
+        """測試取得 Firmware 列表 - 專案不存在"""
+        mock_response = MagicMock()
+        mock_response.status_code = 404
+        
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+        
+        with patch.object(saf_client, '_get_client', return_value=mock_client):
+            with pytest.raises(SAFAPIError) as exc_info:
+                await saf_client.get_fws_by_project_id(
+                    user_id=150,
+                    username="test_user",
+                    project_id="non-existent-project-id"
+                )
+            
+            assert exc_info.value.error_code == "PROJECT_NOT_FOUND"
+
+    @pytest.mark.asyncio
+    async def test_get_fws_by_project_id_empty(self, saf_client):
+        """測試取得 Firmware 列表 - 空列表"""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"fws": []}
+        
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+        
+        with patch.object(saf_client, '_get_client', return_value=mock_client):
+            result = await saf_client.get_fws_by_project_id(
+                user_id=150,
+                username="test_user",
+                project_id="empty-project-id"
+            )
+            
+            assert "fws" in result
+            assert len(result["fws"]) == 0

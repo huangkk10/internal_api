@@ -162,3 +162,27 @@ def mock_project_test_summary_response():
             }
         ]
     }
+
+
+@pytest.fixture
+def mock_fws_by_project_id_response():
+    """模擬 SAF Firmware 列表回應"""
+    return {
+        "fws": [
+            {
+                "fw": "MASTX9KA",
+                "subVersion": "AA",
+                "projectUid": "5d5b7d9763fb45bda79579f85a9a02f5"
+            },
+            {
+                "fw": "G200X9R1",
+                "subVersion": "AA",
+                "projectUid": "52fbea8419254b6b8f7a0e361e73ec03"
+            },
+            {
+                "fw": "BRCHX9QA",
+                "subVersion": "AA",
+                "projectUid": "143f42edb154413ca3b8c57db15f554a"
+            }
+        ]
+    }

@@ -158,3 +158,46 @@ EMPTY_PROJECT_TEST_SUMMARY_RESPONSE = {
     "projectName": "Empty Project",
     "fws": []
 }
+
+
+# SAF Firmware 列表回應 (ListFWsByProjectId)
+FWS_BY_PROJECT_ID_RESPONSE = {
+    "fws": [
+        {
+            "fw": "MASTX9KA",
+            "subVersion": "AA",
+            "projectUid": "5d5b7d9763fb45bda79579f85a9a02f5"
+        },
+        {
+            "fw": "G200X9R1",
+            "subVersion": "AA",
+            "projectUid": "52fbea8419254b6b8f7a0e361e73ec03"
+        },
+        {
+            "fw": "BRCHX9QA",
+            "subVersion": "AA",
+            "projectUid": "143f42edb154413ca3b8c57db15f554a"
+        },
+        {
+            "fw": "G200X9PA",
+            "subVersion": "AA",
+            "projectUid": "8f6bf9fbe4e14e3dbfe5c5fa70d6af2e3"
+        },
+        {
+            "fw": "G200X9QA",
+            "subVersion": "AA",
+            "projectUid": "aab7e05f8458470db6511112a88529d4"
+        },
+        {
+            "fw": "G200X9NM",
+            "subVersion": "AA",
+            "projectUid": "82973456eea14acc863185615b762b8c"
+        }
+    ]
+}
+
+
+# 空的 Firmware 列表回應
+EMPTY_FWS_RESPONSE = {
+    "fws": []
+}
