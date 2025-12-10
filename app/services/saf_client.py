@@ -320,6 +320,72 @@ class SAFClient(LoggerMixin):
             self.logger.error(f"Timeout error: {e}")
             raise SAFConnectionError(f"Connection timeout: {e}")
 
+    @retry(max_attempts=3, delay=1.0, exceptions=(httpx.ConnectError, httpx.TimeoutException))
+    @log_execution
+    async def get_project_dashboard(
+        self,
+        user_id: int,
+        username: str,
+        project_id: str
+    ) -> Dict[str, Any]:
+        """
+        取得專案儀表板資料
+        
+        Args:
+            user_id: 使用者 ID (從登入取得)
+            username: 使用者名稱 (從登入取得)
+            project_id: 專案 ID
+            
+        Returns:
+            包含專案儀表板資料的字典
+            
+        Raises:
+            SAFAPIError: API 呼叫失敗
+            SAFConnectionError: 連線失敗
+        """
+        url = f"{self.settings.saf_api_base_url}/project/GetProjectDashBoard"
+        self.logger.debug(f"Getting project dashboard from: {url}")
+        
+        headers = {
+            "Accept": "application/json, text/plain, */*",
+            "Content-Type": "application/json",
+            "Authorization": str(user_id),
+            "Authorization_name": username,
+        }
+        
+        try:
+            async with self._get_client() as client:
+                response = await client.post(
+                    url,
+                    headers=headers,
+                    json={
+                        "projectId": project_id,
+                    },
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    self.logger.info(f"Retrieved dashboard for project: {project_id}")
+                    return data
+                elif response.status_code == 404:
+                    raise SAFAPIError(
+                        f"Project not found: {project_id}",
+                        status_code=404,
+                        error_code="PROJECT_NOT_FOUND"
+                    )
+                else:
+                    raise SAFAPIError(
+                        f"Failed to get project dashboard: {response.status_code}",
+                        status_code=response.status_code
+                    )
+                    
+        except httpx.ConnectError as e:
+            self.logger.error(f"Connection error: {e}")
+            raise SAFConnectionError(f"Failed to connect to SAF: {e}")
+        except httpx.TimeoutException as e:
+            self.logger.error(f"Timeout error: {e}")
+            raise SAFConnectionError(f"Connection timeout: {e}")
+
 
 # 建立預設客戶端實例
 saf_client = SAFClient()

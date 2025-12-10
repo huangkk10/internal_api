@@ -536,6 +536,218 @@ curl http://localhost:8080/api/v1/projects/00e11fc25a3f454e9e3860ff67dd2c07/full
 
 ---
 
+### 6. 取得測試項目詳細資料
+
+取得專案的所有測試項目詳細資料，包含每個測試項目的結果。
+
+```
+GET /api/v1/projects/{project_uid}/test-details
+```
+
+**Path Parameters:**
+
+| 參數 | 類型 | 說明 |
+|------|------|------|
+| `project_uid` | string | 專案 UID |
+
+**Headers:**
+
+| Header | 必填 | 說明 |
+|--------|------|------|
+| Authorization | 是 | 使用者 ID |
+| Authorization-Name | 是 | 使用者名稱 |
+
+**回應欄位:**
+
+| 區塊 | 欄位 | 說明 |
+|------|------|------|
+| (root) | `project_uid` | 專案 UID |
+| | `project_name` | 專案名稱 |
+| | `fw_name` | Firmware 名稱 |
+| | `sub_version` | 子版本 |
+| | `capacities` | 所有容量列表 |
+| | `total_items` | 總測試項目數 |
+| **details[]** | `category_name` | 測試類別名稱 |
+| | `test_item_name` | 測試項目名稱 |
+| | `size_results` | 各容量的測試結果 |
+| | `total` | 該測試項目的總計 |
+| | `sample_capacity` | 使用的樣品容量配置 |
+| | `note` | 測試說明/備註 |
+| **summary** | `total_ongoing` | 進行中總數 |
+| | `total_passed` | 通過總數 |
+| | `total_conditional_passed` | 條件通過總數 |
+| | `total_failed` | 失敗總數 |
+| | `total_interrupted` | 中斷總數 |
+| | `overall_total` | 總數 |
+| | `pass_rate` | 通過率 (%) |
+
+**結果格式說明:**
+
+result 欄位格式為: `Ongoing/Passed/Conditional Passed/Failed/Interrupted`
+
+例如: `"0/1/0/0/0"` 表示 0 個進行中、1 個通過、0 個條件通過、0 個失敗、0 個中斷
+
+**cURL 範例:**
+```bash
+curl http://localhost:8080/api/v1/projects/bcd1b61fd256475a9d05e986f8e6cfd8/test-details \
+  -H "Authorization: 150" \
+  -H "Authorization-Name: your_username"
+```
+
+**回應範例:**
+```json
+{
+  "success": true,
+  "data": {
+    "project_uid": "bcd1b61fd256475a9d05e986f8e6cfd8",
+    "project_name": "Client_PCIe_Micron_Springsteen_SM2508_Micron B68S TLC",
+    "fw_name": "PH10YC3H_Pyrite_512Byte",
+    "sub_version": "AC",
+    "capacities": ["512GB", "1024GB", "2048GB", "4096GB"],
+    "total_items": 95,
+    "details": [
+      {
+        "category_name": "Functionality",
+        "test_item_name": "Primary Drive Firmware Upgrade Check",
+        "size_results": [
+          {
+            "size": "512GB",
+            "result": {
+              "ongoing": 0,
+              "passed": 1,
+              "conditional_passed": 0,
+              "failed": 0,
+              "interrupted": 0,
+              "total": 1
+            }
+          }
+        ],
+        "total": {
+          "ongoing": 0,
+          "passed": 4,
+          "conditional_passed": 0,
+          "failed": 0,
+          "interrupted": 0,
+          "total": 4
+        },
+        "sample_capacity": "512GB(1),1024GB(1),2048GB(1),4096GB(1)",
+        "note": "a. 開卡Old FW..."
+      }
+    ],
+    "summary": {
+      "total_ongoing": 0,
+      "total_passed": 226,
+      "total_conditional_passed": 34,
+      "total_failed": 6,
+      "total_interrupted": 0,
+      "overall_total": 266,
+      "pass_rate": 97.41
+    }
+  },
+  "timestamp": "2025-12-10T10:00:00Z"
+}
+```
+
+---
+
+### 7. 取得專案儀表板
+
+取得專案儀表板資料，顯示所有 Firmware 的測試進度概覽。
+
+```
+GET /api/v1/projects/{project_id}/dashboard
+```
+
+**Path Parameters:**
+
+| 參數 | 類型 | 說明 |
+|------|------|------|
+| `project_id` | string | 專案 ID |
+
+**Headers:**
+
+| Header | 必填 | 說明 |
+|--------|------|------|
+| Authorization | 是 | 使用者 ID |
+| Authorization-Name | 是 | 使用者名稱 |
+
+**回應欄位:**
+
+| 區塊 | 欄位 | 說明 |
+|------|------|------|
+| (root) | `project_id` | 專案 ID |
+| | `project_name` | 專案名稱 |
+| | `total_firmwares` | Firmware 總數 |
+| **firmwares[]** | `fw_name` | Firmware 名稱 |
+| | `sub_version` | 子版本 |
+| | `passed` | 通過數 |
+| | `failed` | 失敗數 |
+| | `ongoing` | 進行中數 |
+| | `interrupted` | 中斷數 |
+| | `total` | 總測試項目數 |
+| | `pass_rate` | 通過率 (%) |
+| | `completion_rate` | 完成率 (%) |
+| **summary** | `total_passed` | 通過總數 |
+| | `total_failed` | 失敗總數 |
+| | `total_ongoing` | 進行中總數 |
+| | `total_interrupted` | 中斷總數 |
+| | `overall_total` | 總數 |
+| | `overall_pass_rate` | 整體通過率 (%) |
+
+**cURL 範例:**
+```bash
+curl http://localhost:8080/api/v1/projects/123/dashboard \
+  -H "Authorization: 150" \
+  -H "Authorization-Name: your_username"
+```
+
+**回應範例:**
+```json
+{
+  "success": true,
+  "data": {
+    "project_id": "123",
+    "project_name": "Client_PCIe_Micron_Springsteen_SM2508",
+    "total_firmwares": 2,
+    "firmwares": [
+      {
+        "fw_name": "PH10YC3H_Pyrite_512Byte",
+        "sub_version": "AC",
+        "passed": 226,
+        "failed": 6,
+        "ongoing": 0,
+        "interrupted": 0,
+        "total": 266,
+        "pass_rate": 97.41,
+        "completion_rate": 87.22
+      },
+      {
+        "fw_name": "PH10YC4H_Opal_4KB",
+        "sub_version": "AB",
+        "passed": 180,
+        "failed": 10,
+        "ongoing": 5,
+        "interrupted": 0,
+        "total": 200,
+        "pass_rate": 94.74,
+        "completion_rate": 95.0
+      }
+    ],
+    "summary": {
+      "total_passed": 406,
+      "total_failed": 16,
+      "total_ongoing": 5,
+      "total_interrupted": 0,
+      "overall_total": 466,
+      "overall_pass_rate": 96.21
+    }
+  },
+  "timestamp": "2025-12-10T10:00:00Z"
+}
+```
+
+---
+
 ## 錯誤回應
 
 所有錯誤都會返回統一的格式：

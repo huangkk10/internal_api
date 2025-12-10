@@ -248,5 +248,103 @@ class FullProjectSummary(BaseModel):
     )
 
 
+# ========== 測試項目詳細資料相關 ==========
+
+class TestItemResultCount(BaseModel):
+    """測試項目結果計數 (Ongoing/Passed/Conditional Passed/Failed/Interrupted)"""
+    ongoing: int = Field(0, description="進行中")
+    passed: int = Field(0, description="通過")
+    conditional_passed: int = Field(0, description="條件通過")
+    failed: int = Field(0, description="失敗")
+    interrupted: int = Field(0, description="中斷")
+    total: int = Field(0, description="總數")
+
+    class Config:
+        populate_by_name = True
+
+
+class SizeResultDetail(BaseModel):
+    """單一容量的測試結果"""
+    size: str = Field(..., description="容量 (如 512GB)")
+    result: TestItemResultCount = Field(
+        default_factory=TestItemResultCount,
+        description="該容量的測試結果"
+    )
+
+
+class TestItemDetail(BaseModel):
+    """單一測試項目的詳細資料"""
+    category_name: str = Field(..., description="測試類別名稱")
+    test_item_name: str = Field(..., description="測試項目名稱")
+    size_results: List[SizeResultDetail] = Field(
+        default_factory=list,
+        description="各容量的測試結果"
+    )
+    total: TestItemResultCount = Field(
+        default_factory=TestItemResultCount,
+        description="該測試項目總計"
+    )
+    sample_capacity: str = Field("", description="使用的樣品容量配置")
+    note: str = Field("", description="測試說明/備註")
+
+
+class TestDetailsResponse(BaseModel):
+    """測試項目詳細資料回應"""
+    project_uid: str = Field(..., description="專案 UID")
+    project_name: str = Field(..., description="專案名稱")
+    fw_name: str = Field("", description="Firmware 名稱")
+    sub_version: str = Field("", description="子版本")
+    capacities: List[str] = Field(default_factory=list, description="所有容量")
+    total_items: int = Field(0, description="總測試項目數")
+    details: List[TestItemDetail] = Field(
+        default_factory=list,
+        description="所有測試項目詳細資料"
+    )
+    summary: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="總體統計"
+    )
+
+
+# ========== 專案儀表板相關 ==========
+
+class DashboardFirmware(BaseModel):
+    """儀表板中的 Firmware 資料"""
+    fw_name: str = Field(..., description="Firmware 名稱")
+    sub_version: str = Field("", description="子版本")
+    passed: int = Field(0, description="通過數")
+    failed: int = Field(0, description="失敗數")
+    ongoing: int = Field(0, description="進行中")
+    interrupted: int = Field(0, description="中斷數")
+    total: int = Field(0, description="總測試項目數")
+    pass_rate: float = Field(0.0, description="通過率 (%)")
+    completion_rate: float = Field(0.0, description="完成率 (%)")
+
+
+class DashboardSummary(BaseModel):
+    """儀表板總體統計"""
+    total_passed: int = Field(0, description="總通過數")
+    total_failed: int = Field(0, description="總失敗數")
+    total_ongoing: int = Field(0, description="總進行中")
+    total_interrupted: int = Field(0, description="總中斷數")
+    overall_total: int = Field(0, description="總測試項目數")
+    overall_pass_rate: float = Field(0.0, description="整體通過率 (%)")
+
+
+class ProjectDashboard(BaseModel):
+    """專案儀表板回應"""
+    project_id: str = Field(..., description="專案 ID")
+    project_name: str = Field(..., description="專案名稱")
+    total_firmwares: int = Field(0, description="Firmware 總數")
+    firmwares: List[DashboardFirmware] = Field(
+        default_factory=list,
+        description="所有 Firmware 的測試進度"
+    )
+    summary: DashboardSummary = Field(
+        default_factory=DashboardSummary,
+        description="總體統計"
+    )
+
+
 # 解決 Project 自我參照
 Project.model_rebuild()

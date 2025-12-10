@@ -9,11 +9,21 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
 
+# 設定 Proxy（用於 pip 安裝）
+ARG HTTP_PROXY=http://10.10.10.190:3128
+ARG HTTPS_PROXY=http://10.10.10.190:3128
+ENV http_proxy=$HTTP_PROXY
+ENV https_proxy=$HTTPS_PROXY
+
 # 複製依賴檔案
 COPY requirements.txt .
 
-# 安裝 Python 依賴（跳過 proxy）
+# 安裝 Python 依賴
 RUN pip install --no-cache-dir --trusted-host pypi.org --trusted-host files.pythonhosted.org -r requirements.txt
+
+# 清除 Proxy 環境變數（運行時不需要）
+ENV http_proxy=
+ENV https_proxy=
 
 # 複製應用程式碼
 COPY app/ ./app/

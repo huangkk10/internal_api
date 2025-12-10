@@ -945,3 +945,412 @@ async def get_full_project_summary(
                 error_code="CONNECTION_ERROR"
             )
         )
+
+
+def _parse_detail_result_string(result_str: str) -> Dict[str, int]:
+    """
+    解析 details 的結果字串
+    
+    格式: Ongoing/Passed/Conditional Passed/Failed/Interrupted
+    
+    Args:
+        result_str: 如 "0/1/0/0/0"
+        
+    Returns:
+        {'ongoing': 0, 'passed': 1, 'conditional_passed': 0, 'failed': 0, 'interrupted': 0, 'total': 1}
+    """
+    parts = result_str.split("/")
+    if len(parts) != 5:
+        return {
+            "ongoing": 0,
+            "passed": 0,
+            "conditional_passed": 0,
+            "failed": 0,
+            "interrupted": 0,
+            "total": 0
+        }
+    
+    try:
+        ongoing = int(parts[0])
+        passed = int(parts[1])
+        conditional_passed = int(parts[2])
+        failed = int(parts[3])
+        interrupted = int(parts[4])
+        total = ongoing + passed + conditional_passed + failed + interrupted
+        
+        return {
+            "ongoing": ongoing,
+            "passed": passed,
+            "conditional_passed": conditional_passed,
+            "failed": failed,
+            "interrupted": interrupted,
+            "total": total
+        }
+    except ValueError:
+        return {
+            "ongoing": 0,
+            "passed": 0,
+            "conditional_passed": 0,
+            "failed": 0,
+            "interrupted": 0,
+            "total": 0
+        }
+
+
+def _transform_test_details(raw_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    將 SAF 原始資料轉換為測試項目詳細資料格式
+    
+    Args:
+        raw_data: SAF API 回傳的原始資料
+        
+    Returns:
+        TestDetailsResponse 格式的字典
+    """
+    project_name = raw_data.get("projectName", "")
+    
+    # 取得第一個 firmware 的資料
+    fws = raw_data.get("fws", [])
+    if not fws:
+        return {
+            "project_uid": "",
+            "project_name": project_name,
+            "fw_name": "",
+            "sub_version": "",
+            "capacities": [],
+            "total_items": 0,
+            "details": [],
+            "summary": {
+                "total_ongoing": 0,
+                "total_passed": 0,
+                "total_conditional_passed": 0,
+                "total_failed": 0,
+                "total_interrupted": 0,
+                "overall_total": 0,
+                "pass_rate": 0.0
+            }
+        }
+    
+    fw = fws[0]
+    project_uid = fw.get("projectUid", "")
+    fw_name = fw.get("fwName", "")
+    sub_version = fw.get("subVersionName", "")
+    
+    # 取得 details 資料
+    raw_details = fw.get("details", [])
+    
+    # 收集所有容量
+    all_capacities = set()
+    
+    # 總計統計
+    total_ongoing = 0
+    total_passed = 0
+    total_conditional_passed = 0
+    total_failed = 0
+    total_interrupted = 0
+    
+    # 轉換 details
+    details = []
+    for item in raw_details:
+        category_name = item.get("categoryName", "Unknown")
+        test_item_name = item.get("testItemName", "Unknown")
+        sample_capacity = item.get("sampleCapacity", "")
+        note = item.get("note", "")
+        
+        # 處理各容量的結果
+        size_results = []
+        for size_data in item.get("sizeResult", []):
+            size = size_data.get("size", "Unknown")
+            result_str = size_data.get("result", "0/0/0/0/0")
+            
+            all_capacities.add(size)
+            result = _parse_detail_result_string(result_str)
+            
+            size_results.append({
+                "size": size,
+                "result": result
+            })
+        
+        # 處理該測試項目的總計
+        total_str = item.get("total", "0/0/0/0/0")
+        item_total = _parse_detail_result_string(total_str)
+        
+        # 累加到總計
+        total_ongoing += item_total["ongoing"]
+        total_passed += item_total["passed"]
+        total_conditional_passed += item_total["conditional_passed"]
+        total_failed += item_total["failed"]
+        total_interrupted += item_total["interrupted"]
+        
+        details.append({
+            "category_name": category_name,
+            "test_item_name": test_item_name,
+            "size_results": size_results,
+            "total": item_total,
+            "sample_capacity": sample_capacity,
+            "note": note
+        })
+    
+    # 計算通過率 (passed / (passed + failed))
+    completed_tests = total_passed + total_failed
+    pass_rate = (total_passed / completed_tests * 100) if completed_tests > 0 else 0.0
+    
+    # 排序容量 (按數字大小)
+    def sort_capacity(cap: str) -> int:
+        try:
+            return int(cap.replace("GB", "").replace("TB", "000"))
+        except ValueError:
+            return 0
+    
+    sorted_capacities = sorted(list(all_capacities), key=sort_capacity)
+    
+    overall_total = (
+        total_ongoing + total_passed + total_conditional_passed +
+        total_failed + total_interrupted
+    )
+    
+    return {
+        "project_uid": project_uid,
+        "project_name": project_name,
+        "fw_name": fw_name,
+        "sub_version": sub_version,
+        "capacities": sorted_capacities,
+        "total_items": len(details),
+        "details": details,
+        "summary": {
+            "total_ongoing": total_ongoing,
+            "total_passed": total_passed,
+            "total_conditional_passed": total_conditional_passed,
+            "total_failed": total_failed,
+            "total_interrupted": total_interrupted,
+            "overall_total": overall_total,
+            "pass_rate": round(pass_rate, 2)
+        }
+    }
+
+
+@router.get(
+    "/{project_uid}/test-details",
+    response_model=APIResponse,
+    summary="取得測試項目詳細資料"
+)
+async def get_project_test_details(
+    project_uid: str,
+    auth: AuthInfo = Depends(get_auth_info),
+    client: SAFClient = Depends(get_saf_client)
+):
+    """
+    取得專案的所有測試項目詳細資料
+    
+    包含每個測試項目的：
+    - **category_name**: 測試類別名稱
+    - **test_item_name**: 測試項目名稱
+    - **size_results**: 各容量的測試結果
+    - **total**: 該測試項目的總計
+    - **sample_capacity**: 使用的樣品容量配置
+    - **note**: 測試說明/備註
+    
+    結果格式: Ongoing/Passed/Conditional Passed/Failed/Interrupted
+    
+    需要在 Header 中提供認證資訊：
+    - **Authorization**: 使用者 ID (從登入 API 取得)
+    - **Authorization-Name**: 使用者名稱 (從登入 API 取得)
+    """
+    try:
+        # 取得原始資料
+        raw_data = await client.get_project_test_summary(
+            user_id=auth.user_id,
+            username=auth.username,
+            project_uid=project_uid
+        )
+        
+        # 轉換為測試項目詳細資料格式
+        result = _transform_test_details(raw_data)
+        
+        return format_response(
+            success=True,
+            data=result
+        )
+        
+    except SAFAPIError as e:
+        if hasattr(e, 'error_code') and e.error_code == "PROJECT_NOT_FOUND":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=format_response(
+                    success=False,
+                    message=f"Project not found: {project_uid}",
+                    error_code="PROJECT_NOT_FOUND"
+                )
+            )
+        logger.error(f"SAF API error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=format_response(
+                success=False,
+                message=str(e),
+                error_code="SAF_API_ERROR"
+            )
+        )
+    except SAFConnectionError as e:
+        logger.error(f"SAF connection error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=format_response(
+                success=False,
+                message="Unable to connect to SAF server",
+                error_code="CONNECTION_ERROR"
+            )
+        )
+
+
+def _transform_dashboard(raw_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    將 SAF 原始資料轉換為專案儀表板格式
+    
+    Args:
+        raw_data: SAF API 回傳的原始資料
+        
+    Returns:
+        ProjectDashboard 格式的字典
+    """
+    project_id = raw_data.get("projectId", "")
+    project_name = raw_data.get("projectName", "")
+    fws = raw_data.get("fws", [])
+    
+    # 總計統計
+    total_passed = 0
+    total_failed = 0
+    total_ongoing = 0
+    total_interrupted = 0
+    overall_total = 0
+    
+    # 轉換 Firmware 資料
+    firmwares = []
+    for fw in fws:
+        fw_name = fw.get("fwName", "")
+        sub_version = fw.get("subVersionName", "")
+        passed = fw.get("itemPassedCnt", 0) or 0
+        failed = fw.get("itemFailedCnt", 0) or 0
+        ongoing = fw.get("itemOngoingCnt", 0) or 0
+        interrupted = fw.get("itemInterruptCnt", 0) or 0
+        total = fw.get("totalItemCnt", 0) or 0
+        
+        # 計算通過率: passed / (passed + failed) * 100
+        completed = passed + failed
+        pass_rate = (passed / completed * 100) if completed > 0 else 0.0
+        
+        # 計算完成率: (passed + failed) / total * 100
+        completion_rate = (completed / total * 100) if total > 0 else 0.0
+        
+        firmwares.append({
+            "fw_name": fw_name,
+            "sub_version": sub_version,
+            "passed": passed,
+            "failed": failed,
+            "ongoing": ongoing,
+            "interrupted": interrupted,
+            "total": total,
+            "pass_rate": round(pass_rate, 2),
+            "completion_rate": round(completion_rate, 2)
+        })
+        
+        # 累加到總計
+        total_passed += passed
+        total_failed += failed
+        total_ongoing += ongoing
+        total_interrupted += interrupted
+        overall_total += total
+    
+    # 計算整體通過率
+    overall_completed = total_passed + total_failed
+    overall_pass_rate = (total_passed / overall_completed * 100) if overall_completed > 0 else 0.0
+    
+    return {
+        "project_id": project_id,
+        "project_name": project_name,
+        "total_firmwares": len(firmwares),
+        "firmwares": firmwares,
+        "summary": {
+            "total_passed": total_passed,
+            "total_failed": total_failed,
+            "total_ongoing": total_ongoing,
+            "total_interrupted": total_interrupted,
+            "overall_total": overall_total,
+            "overall_pass_rate": round(overall_pass_rate, 2)
+        }
+    }
+
+
+@router.get(
+    "/{project_id}/dashboard",
+    response_model=APIResponse,
+    summary="取得專案儀表板"
+)
+async def get_project_dashboard(
+    project_id: str,
+    auth: AuthInfo = Depends(get_auth_info),
+    client: SAFClient = Depends(get_saf_client)
+):
+    """
+    取得專案儀表板資料，顯示所有 Firmware 的測試進度概覽
+    
+    包含每個 Firmware 的：
+    - **fw_name**: Firmware 名稱
+    - **sub_version**: 子版本
+    - **passed**: 通過數
+    - **failed**: 失敗數
+    - **ongoing**: 進行中
+    - **interrupted**: 中斷數
+    - **total**: 總測試項目數
+    - **pass_rate**: 通過率 (%)
+    - **completion_rate**: 完成率 (%)
+    
+    需要在 Header 中提供認證資訊：
+    - **Authorization**: 使用者 ID (從登入 API 取得)
+    - **Authorization-Name**: 使用者名稱 (從登入 API 取得)
+    """
+    try:
+        # 取得原始資料
+        raw_data = await client.get_project_dashboard(
+            user_id=auth.user_id,
+            username=auth.username,
+            project_id=project_id
+        )
+        
+        # 轉換為儀表板格式
+        result = _transform_dashboard(raw_data)
+        
+        return format_response(
+            success=True,
+            data=result
+        )
+        
+    except SAFAPIError as e:
+        if hasattr(e, 'error_code') and e.error_code == "PROJECT_NOT_FOUND":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=format_response(
+                    success=False,
+                    message=f"Project not found: {project_id}",
+                    error_code="PROJECT_NOT_FOUND"
+                )
+            )
+        logger.error(f"SAF API error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=format_response(
+                success=False,
+                message=str(e),
+                error_code="SAF_API_ERROR"
+            )
+        )
+    except SAFConnectionError as e:
+        logger.error(f"SAF connection error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=format_response(
+                success=False,
+                message="Unable to connect to SAF server",
+                error_code="CONNECTION_ERROR"
+            )
+        )
