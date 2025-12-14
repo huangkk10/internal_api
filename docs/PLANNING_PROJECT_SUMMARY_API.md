@@ -63,9 +63,11 @@
 
 ### 1.5 結果格式
 
-結果以 `PASS/FAIL/ONGOING/CANCEL/CHECK` 格式呈現，例如：
-- `"8/0/0/0/0"` = 8 PASS, 0 FAIL, 0 ONGOING, 0 CANCEL, 0 CHECK
-- `"0/1/0/0/0"` = 0 PASS, 1 FAIL, 0 ONGOING, 0 CANCEL, 0 CHECK
+結果以 `Ongoing/Passed/Conditional Passed/Failed/Interrupted` 格式呈現，例如：
+- `"0/8/0/0/0"` = 0 Ongoing, 8 PASS, 0 Conditional Pass, 0 FAIL, 0 Interrupted
+- `"0/0/0/1/0"` = 0 Ongoing, 0 PASS, 0 Conditional Pass, 1 FAIL, 0 Interrupted
+
+> **注意**: 此格式與 PASS/FAIL/ONGOING/CANCEL/CHECK 順序不同！
 
 ---
 

@@ -473,26 +473,29 @@ def _parse_result_string(result_str: str) -> Dict[str, int]:
     """
     解析結果字串
     
+    SAF API 回傳格式: Ongoing/Passed/Conditional Passed/Failed/Interrupted
+    (注意：不是 PASS/FAIL/ONGOING/CANCEL/CHECK)
+    
     Args:
-        result_str: 如 "8/0/0/0/0" (PASS/FAIL/ONGOING/CANCEL/CHECK)
+        result_str: 如 "0/8/0/0/0" (Ongoing/Passed/Conditional/Failed/Interrupted)
         
     Returns:
-        {'pass': 8, 'fail': 0, 'ongoing': 0, 'cancel': 0, 'check': 0}
+        {'ongoing': 0, 'pass': 8, 'conditional_pass': 0, 'fail': 0, 'check': 0}
     """
     parts = result_str.split("/")
     if len(parts) != 5:
-        return {"pass": 0, "fail": 0, "ongoing": 0, "cancel": 0, "check": 0}
+        return {"ongoing": 0, "pass": 0, "conditional_pass": 0, "fail": 0, "check": 0}
     
     try:
         return {
-            "pass": int(parts[0]),
-            "fail": int(parts[1]),
-            "ongoing": int(parts[2]),
-            "cancel": int(parts[3]),
+            "ongoing": int(parts[0]),
+            "pass": int(parts[1]),
+            "conditional_pass": int(parts[2]),
+            "fail": int(parts[3]),
             "check": int(parts[4]),
         }
     except ValueError:
-        return {"pass": 0, "fail": 0, "ongoing": 0, "cancel": 0, "check": 0}
+        return {"ongoing": 0, "pass": 0, "conditional_pass": 0, "fail": 0, "check": 0}
 
 
 def _transform_test_summary(raw_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -554,7 +557,7 @@ def _transform_test_summary(raw_data: Dict[str, Any]) -> Dict[str, Any]:
                 "total_pass": 0,
                 "total_fail": 0,
                 "total_ongoing": 0,
-                "total_cancel": 0,
+                "total_conditional_pass": 0,
                 "total_check": 0,
                 "overall_total": 0,
                 "overall_pass_rate": 0.0
@@ -580,10 +583,10 @@ def _transform_test_summary(raw_data: Dict[str, Any]) -> Dict[str, Any]:
                     "name": cat_name,
                     "results_by_capacity": {},
                     "total": {
-                        "pass": 0,
-                        "fail": 0,
                         "ongoing": 0,
-                        "cancel": 0,
+                        "pass": 0,
+                        "conditional_pass": 0,
+                        "fail": 0,
                         "check": 0,
                     }
                 }
@@ -600,19 +603,19 @@ def _transform_test_summary(raw_data: Dict[str, Any]) -> Dict[str, Any]:
                 # 初始化容量結果
                 if capacity not in categories_map[cat_name]["results_by_capacity"]:
                     categories_map[cat_name]["results_by_capacity"][capacity] = {
-                        "pass": 0, "fail": 0, "ongoing": 0, "cancel": 0, "check": 0
+                        "ongoing": 0, "pass": 0, "conditional_pass": 0, "fail": 0, "check": 0
                     }
                 
                 # 累加
-                for key in ["pass", "fail", "ongoing", "cancel", "check"]:
+                for key in ["ongoing", "pass", "conditional_pass", "fail", "check"]:
                     categories_map[cat_name]["results_by_capacity"][capacity][key] += result[key]
                     categories_map[cat_name]["total"][key] += result[key]
     
     # 計算總計和 pass rate
-    total_pass = 0
-    total_fail = 0
     total_ongoing = 0
-    total_cancel = 0
+    total_pass = 0
+    total_conditional_pass = 0
+    total_fail = 0
     total_check = 0
     
     categories = []
@@ -632,13 +635,13 @@ def _transform_test_summary(raw_data: Dict[str, Any]) -> Dict[str, Any]:
         
         categories.append(cat_data)
         
-        total_pass += cat_data["total"]["pass"]
-        total_fail += cat_data["total"]["fail"]
         total_ongoing += cat_data["total"]["ongoing"]
-        total_cancel += cat_data["total"]["cancel"]
+        total_pass += cat_data["total"]["pass"]
+        total_conditional_pass += cat_data["total"]["conditional_pass"]
+        total_fail += cat_data["total"]["fail"]
         total_check += cat_data["total"]["check"]
     
-    overall_total = total_pass + total_fail + total_ongoing + total_cancel + total_check
+    overall_total = total_ongoing + total_pass + total_conditional_pass + total_fail + total_check
     overall_pass_rate = (total_pass / overall_total * 100) if overall_total > 0 else 0.0
     
     # 排序容量 (按數字大小)
@@ -659,10 +662,10 @@ def _transform_test_summary(raw_data: Dict[str, Any]) -> Dict[str, Any]:
         "capacities": sorted_capacities,
         "categories": categories,
         "summary": {
-            "total_pass": total_pass,
-            "total_fail": total_fail,
             "total_ongoing": total_ongoing,
-            "total_cancel": total_cancel,
+            "total_pass": total_pass,
+            "total_conditional_pass": total_conditional_pass,
+            "total_fail": total_fail,
             "total_check": total_check,
             "overall_total": overall_total,
             "overall_pass_rate": round(overall_pass_rate, 2)
