@@ -346,5 +346,47 @@ class ProjectDashboard(BaseModel):
     )
 
 
+# ========== Known Issue 相關 ==========
+
+class KnownIssue(BaseModel):
+    """Known Issue 資料"""
+    id: str = Field(..., description="Issue ID")
+    project_id: str = Field(..., description="專案 ID")
+    project_name: str = Field(..., description="專案名稱")
+    root_id: str = Field(..., description="Root ID")
+    test_item_name: str = Field(..., description="測試項目名稱")
+    issue_id: str = Field(..., description="Issue 編號 (如 Oakgate-1)")
+    case_name: str = Field(..., description="Case 名稱")
+    case_path: str = Field(..., description="Case 路徑")
+    created_by: str = Field(..., description="建立者")
+    created_at: str = Field(..., description="建立時間")
+    jira_id: str = Field("", description="JIRA ID")
+    note: str = Field("", description="備註")
+    is_enable: bool = Field(True, description="是否啟用")
+    jira_link: str = Field("", description="JIRA 連結")
+
+
+class KnownIssueListRequest(BaseModel):
+    """Known Issues 查詢請求"""
+    project_id: Optional[List[str]] = Field(
+        default_factory=list,
+        description="篩選的專案 ID 列表 (空列表表示全部)"
+    )
+    root_id: Optional[List[str]] = Field(
+        default_factory=list,
+        description="篩選的 Root ID 列表 (空列表表示全部)"
+    )
+    show_disable: bool = Field(True, description="是否顯示停用的 Issues")
+
+
+class KnownIssueListResponse(BaseModel):
+    """Known Issues 列表回應"""
+    items: List[KnownIssue] = Field(
+        default_factory=list,
+        description="Known Issues 列表"
+    )
+    total: int = Field(0, description="總筆數")
+
+
 # 解決 Project 自我參照
 Project.model_rebuild()

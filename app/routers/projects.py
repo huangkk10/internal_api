@@ -1357,3 +1357,126 @@ async def get_project_dashboard(
                 error_code="CONNECTION_ERROR"
             )
         )
+
+
+def _transform_known_issue(item: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    將 SAF 原始 Known Issue 資料轉換為友善格式
+    
+    Args:
+        item: SAF API 回傳的單一 known issue 資料
+        
+    Returns:
+        轉換後的 known issue 字典
+    """
+    return {
+        "id": item.get("id", ""),
+        "project_id": item.get("projectId", ""),
+        "project_name": item.get("projectName", ""),
+        "root_id": item.get("rootId", ""),
+        "test_item_name": item.get("testItemName", ""),
+        "issue_id": item.get("issueId", ""),
+        "case_name": item.get("caseName", ""),
+        "case_path": item.get("casePath", ""),
+        "created_by": item.get("createdBy", ""),
+        "created_at": item.get("createdAt", ""),
+        "jira_id": item.get("jiraId", ""),
+        "note": item.get("note", ""),
+        "is_enable": item.get("isEnable", True),
+        "jira_link": item.get("jiraLink", ""),
+    }
+
+
+@router.post(
+    "/known-issues",
+    response_model=APIResponse,
+    summary="取得 Known Issues 列表"
+)
+async def get_known_issues(
+    project_id: Optional[List[str]] = Query(
+        default=None,
+        description="篩選的專案 ID 列表"
+    ),
+    root_id: Optional[List[str]] = Query(
+        default=None,
+        description="篩選的 Root ID 列表"
+    ),
+    show_disable: bool = Query(
+        default=True,
+        description="是否顯示停用的 Issues"
+    ),
+    auth: AuthInfo = Depends(get_auth_info),
+    client: SAFClient = Depends(get_saf_client)
+):
+    """
+    取得所有 Known Issues 列表
+    
+    可透過以下參數篩選：
+    - **project_id**: 專案 ID 列表 (可多選)
+    - **root_id**: Root ID 列表 (可多選)
+    - **show_disable**: 是否顯示停用的 Issues (預設 true)
+    
+    回傳每個 Known Issue 的：
+    - **id**: Issue ID
+    - **project_id**: 專案 ID
+    - **project_name**: 專案名稱
+    - **root_id**: Root ID
+    - **test_item_name**: 測試項目名稱
+    - **issue_id**: Issue 編號 (如 Oakgate-1)
+    - **case_name**: Case 名稱
+    - **case_path**: Case 路徑
+    - **created_by**: 建立者
+    - **created_at**: 建立時間
+    - **jira_id**: JIRA ID
+    - **note**: 備註
+    - **is_enable**: 是否啟用
+    - **jira_link**: JIRA 連結
+    
+    需要在 Header 中提供認證資訊：
+    - **Authorization**: 使用者 ID (從登入 API 取得)
+    - **Authorization-Name**: 使用者名稱 (從登入 API 取得)
+    """
+    try:
+        # 呼叫 SAF API
+        raw_data = await client.list_known_issues(
+            user_id=auth.user_id,
+            username=auth.username,
+            project_id=project_id or [],
+            root_id=root_id or [],
+            show_disable=show_disable
+        )
+        
+        # 轉換資料格式
+        items = raw_data.get("items", [])
+        transformed_items = [_transform_known_issue(item) for item in items]
+        
+        result = {
+            "items": transformed_items,
+            "total": len(transformed_items)
+        }
+        
+        return format_response(
+            success=True,
+            data=result
+        )
+        
+    except SAFAPIError as e:
+        logger.error(f"SAF API error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=format_response(
+                success=False,
+                message=str(e),
+                error_code="SAF_API_ERROR"
+            )
+        )
+    except SAFConnectionError as e:
+        logger.error(f"SAF connection error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=format_response(
+                success=False,
+                message="Unable to connect to SAF server",
+                error_code="CONNECTION_ERROR"
+            )
+        )

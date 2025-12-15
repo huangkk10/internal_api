@@ -748,6 +748,121 @@ curl http://localhost:8080/api/v1/projects/123/dashboard \
 
 ---
 
+### 8. 取得 Known Issues 列表
+
+取得所有 Known Issues 列表，可依專案或 Root ID 篩選。
+
+```
+POST /api/v1/projects/known-issues
+```
+
+**Query Parameters:**
+
+| 參數 | 類型 | 必填 | 說明 |
+|------|------|------|------|
+| `project_id` | string[] | 否 | 篩選的專案 ID 列表 (可多選) |
+| `root_id` | string[] | 否 | 篩選的 Root ID 列表 (可多選) |
+| `show_disable` | boolean | 否 | 是否顯示停用的 Issues (預設 true) |
+
+**Headers:**
+
+| Header | 必填 | 說明 |
+|--------|------|------|
+| Authorization | 是 | 使用者 ID |
+| Authorization-Name | 是 | 使用者名稱 |
+
+**回應欄位:**
+
+| 區塊 | 欄位 | 說明 |
+|------|------|------|
+| (root) | `items` | Known Issues 列表 |
+| | `total` | 總筆數 |
+| **items[]** | `id` | Issue ID |
+| | `project_id` | 專案 ID |
+| | `project_name` | 專案名稱 |
+| | `root_id` | Root ID |
+| | `test_item_name` | 測試項目名稱 |
+| | `issue_id` | Issue 編號 (如 Oakgate-1) |
+| | `case_name` | Case 名稱 |
+| | `case_path` | Case 路徑 |
+| | `created_by` | 建立者 |
+| | `created_at` | 建立時間 |
+| | `jira_id` | JIRA ID |
+| | `note` | 備註 |
+| | `is_enable` | 是否啟用 |
+| | `jira_link` | JIRA 連結 |
+
+**cURL 範例:**
+
+```bash
+# 取得所有 Known Issues
+curl -X POST "http://localhost:8080/api/v1/projects/known-issues" \
+  -H "Authorization: 150" \
+  -H "Authorization-Name: your_username"
+
+# 篩選特定專案的 Known Issues
+curl -X POST "http://localhost:8080/api/v1/projects/known-issues?project_id=ca63e07024db4af69cbfbe64933f5a9d" \
+  -H "Authorization: 150" \
+  -H "Authorization-Name: your_username"
+
+# 篩選多個專案
+curl -X POST "http://localhost:8080/api/v1/projects/known-issues?project_id=proj1&project_id=proj2" \
+  -H "Authorization: 150" \
+  -H "Authorization-Name: your_username"
+
+# 只顯示啟用的 Issues
+curl -X POST "http://localhost:8080/api/v1/projects/known-issues?show_disable=false" \
+  -H "Authorization: 150" \
+  -H "Authorization-Name: your_username"
+```
+
+**回應範例:**
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "id": "a3e25c0d83b34d8599e9870b368e74",
+        "project_id": "ca63e07024db4af69cbfbe64933f5a9d",
+        "project_name": "Enterprise_PCIe_SMI_Montitan_SM8366_Kioxia BiCS8 TLC",
+        "root_id": "STC-61",
+        "test_item_name": "OGT_MS_OCP2.0 Test suite",
+        "issue_id": "Oakgate-1",
+        "case_name": "Namespace Basic Data 2.0 v0.56",
+        "case_path": "Namespace Basic Data 2.0 v0.56",
+        "created_by": "Sunny.Fan",
+        "created_at": "2025-09-12 09:58:28",
+        "jira_id": "SVDFWV-43236",
+        "note": "Script issue",
+        "is_enable": true,
+        "jira_link": "https://jira.siliconmotion.com.tw:8443/browse/SVDFWV-43236"
+      },
+      {
+        "id": "000bcba87b354f14a29c3884bf5d4608",
+        "project_id": "ca63e07024db4af69cbfbe64933f5a9d",
+        "project_name": "Enterprise_PCIe_SMI_Montitan_SM8366_Kioxia BiCS8 TLC",
+        "root_id": "STC-61",
+        "test_item_name": "OGT_MS_OCP2.0 Test suite",
+        "issue_id": "Oakgate-2",
+        "case_name": "IO Commands 2.0 v0.56",
+        "case_path": "IO Commands 2.0 v0.56",
+        "created_by": "Sunny.Fan",
+        "created_at": "2025-09-12 09:58:48",
+        "jira_id": "SVDFWV-43236",
+        "note": "script issue",
+        "is_enable": true,
+        "jira_link": "https://jira.siliconmotion.com.tw:8443/browse/SVDFWV-43236"
+      }
+    ],
+    "total": 2
+  },
+  "timestamp": "2025-12-15T10:00:00Z"
+}
+```
+
+---
+
 ## 錯誤回應
 
 所有錯誤都會返回統一的格式：

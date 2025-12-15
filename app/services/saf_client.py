@@ -322,6 +322,73 @@ class SAFClient(LoggerMixin):
 
     @retry(max_attempts=3, delay=1.0, exceptions=(httpx.ConnectError, httpx.TimeoutException))
     @log_execution
+    async def list_known_issues(
+        self,
+        user_id: int,
+        username: str,
+        project_id: Optional[List[str]] = None,
+        root_id: Optional[List[str]] = None,
+        show_disable: bool = True
+    ) -> Dict[str, Any]:
+        """
+        取得所有 Known Issues 列表
+        
+        Args:
+            user_id: 使用者 ID (從登入取得)
+            username: 使用者名稱 (從登入取得)
+            project_id: 專案 ID 列表 (可選，空列表表示全部)
+            root_id: Root ID 列表 (可選，空列表表示全部)
+            show_disable: 是否顯示停用的 issues (預設 True)
+            
+        Returns:
+            包含 known issues 列表的字典
+            
+        Raises:
+            SAFAPIError: API 呼叫失敗
+            SAFConnectionError: 連線失敗
+        """
+        url = f"{self.settings.saf_api_base_url}/knownIssue/ListAllKnownIssue"
+        self.logger.debug(f"Getting known issues from: {url}")
+        
+        headers = {
+            "Accept": "application/json, text/plain, */*",
+            "Content-Type": "application/json",
+            "Authorization": str(user_id),
+            "Authorization_name": username,
+        }
+        
+        try:
+            async with self._get_client() as client:
+                response = await client.post(
+                    url,
+                    headers=headers,
+                    json={
+                        "projectId": project_id or [],
+                        "rootId": root_id or [],
+                        "showDisable": show_disable,
+                    },
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    items_count = len(data.get("items", []))
+                    self.logger.info(f"Retrieved {items_count} known issues")
+                    return data
+                else:
+                    raise SAFAPIError(
+                        f"Failed to get known issues: {response.status_code}",
+                        status_code=response.status_code
+                    )
+                    
+        except httpx.ConnectError as e:
+            self.logger.error(f"Connection error: {e}")
+            raise SAFConnectionError(f"Failed to connect to SAF: {e}")
+        except httpx.TimeoutException as e:
+            self.logger.error(f"Timeout error: {e}")
+            raise SAFConnectionError(f"Connection timeout: {e}")
+
+    @retry(max_attempts=3, delay=1.0, exceptions=(httpx.ConnectError, httpx.TimeoutException))
+    @log_execution
     async def get_project_dashboard(
         self,
         user_id: int,

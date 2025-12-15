@@ -79,6 +79,7 @@ docker-compose down
 | `/api/v1/projects/{project_uid}/full-summary` | GET | 取得完整專案摘要 |
 | `/api/v1/projects/{project_uid}/test-details` | GET | 取得測試項目詳細資料 |
 | `/api/v1/projects/{project_id}/dashboard` | GET | 取得專案儀表板 |
+| `/api/v1/projects/known-issues` | POST | 取得 Known Issues 列表 |
 
 詳細 API 使用說明請參考 [docs/API.md](docs/API.md)。
 
