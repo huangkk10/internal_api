@@ -1020,6 +1020,87 @@ curl -X POST "http://localhost:8080/api/v1/projects/test-status/search" \
 
 ---
 
+### 10. 取得專案測試工作列表
+
+取得指定專案的所有測試工作列表。
+
+```
+POST /api/v1/projects/test-jobs
+```
+
+**Request Body:**
+
+| 欄位 | 類型 | 必填 | 說明 |
+|------|------|------|------|
+| `project_ids` | string[] | 是 | 專案 ID 列表 |
+| `test_tool_key` | string | 否 | 測試工具 Key (用於篩選) |
+
+**Headers:**
+
+| Header | 必填 | 說明 |
+|--------|------|------|
+| Authorization | 是 | 使用者 ID |
+| Authorization-Name | 是 | 使用者名稱 |
+
+**回應欄位:**
+
+| 區塊 | 欄位 | 說明 |
+|------|------|------|
+| (root) | `test_jobs` | 測試工作列表 |
+| | `total` | 總筆數 |
+| **test_jobs[]** | `test_job_id` | 測試工作 ID |
+| | `fw` | 韌體版本 |
+| | `test_plan_name` | 測試計畫名稱 |
+| | `test_category_name` | 測試類別名稱 |
+| | `root_id` | Root ID |
+| | `test_item_name` | 測試項目名稱 |
+| | `test_status` | 測試狀態 (Pass/Fail) |
+| | `sample_id` | 樣品 ID |
+| | `capacity` | 容量 |
+| | `platform` | 測試平台 |
+| | `test_tool_key_list` | 測試工具 Key 列表 |
+
+**cURL 範例:**
+
+```bash
+curl -X POST "http://localhost:8080/api/v1/projects/test-jobs" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: 150" \
+  -H "Authorization-Name: your_username" \
+  -d '{
+    "project_ids": ["bfb11082e7fb44d9b19dd3837fe1c6a2"],
+    "test_tool_key": ""
+  }'
+```
+
+**回應範例:**
+```json
+{
+  "success": true,
+  "data": {
+    "test_jobs": [
+      {
+        "test_job_id": "1d291784c06111f0b40c0242ac280004",
+        "fw": "HHB0YBC1",
+        "test_plan_name": "Client_PCIe_Standard",
+        "test_category_name": "NVMe_Validation_Tool",
+        "root_id": "STC-4337",
+        "test_item_name": "NVMe_Validation_Tool_2(oem_hp_test_v1_4_hp)",
+        "test_status": "Fail",
+        "sample_id": "SSD-Y-15767",
+        "capacity": "1024GB",
+        "platform": "PC-SSD-5836",
+        "test_tool_key_list": ["snvt2"]
+      }
+    ],
+    "total": 982
+  },
+  "timestamp": "2025-12-17T03:40:00Z"
+}
+```
+
+---
+
 ## 錯誤回應
 
 所有錯誤都會返回統一的格式：

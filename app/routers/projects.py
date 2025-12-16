@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.config import Settings, get_settings
-from app.models.schemas import APIResponse, AuthInfo, ProjectListResponse, TestStatusSearchRequest
+from app.models.schemas import APIResponse, AuthInfo, ProjectListResponse, TestStatusSearchRequest, TestJobsRequest
 from app.routers.auth import get_auth_info
 from app.services.saf_client import SAFClient
 from lib.exceptions import SAFAPIError, SAFConnectionError
@@ -1580,6 +1580,112 @@ async def search_test_status(
             "total": raw_data.get("total", 0),
             "page": request.page,
             "size": request.size
+        }
+        
+        return format_response(
+            success=True,
+            data=result
+        )
+        
+    except SAFAPIError as e:
+        logger.error(f"SAF API error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=format_response(
+                success=False,
+                message=str(e),
+                error_code="SAF_API_ERROR"
+            )
+        )
+    except SAFConnectionError as e:
+        logger.error(f"SAF connection error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=format_response(
+                success=False,
+                message="Unable to connect to SAF server",
+                error_code="CONNECTION_ERROR"
+            )
+        )
+
+
+def _transform_test_job_item(item: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    將 SAF 原始測試工作資料轉換為 snake_case 格式
+    
+    Args:
+        item: SAF API 回傳的單一測試工作資料
+        
+    Returns:
+        轉換後的測試工作字典
+    """
+    return {
+        "test_job_id": item.get("testJobId", ""),
+        "fw": item.get("fw", ""),
+        "test_plan_name": item.get("testPlanName", ""),
+        "test_category_name": item.get("testCategoryName", ""),
+        "root_id": item.get("rootId", ""),
+        "test_item_name": item.get("testItemName", ""),
+        "test_status": item.get("testStatus", ""),
+        "sample_id": item.get("sampleId", ""),
+        "capacity": item.get("capacity", ""),
+        "platform": item.get("platform", ""),
+        "test_tool_key_list": item.get("testToolKeyList", []),
+    }
+
+
+@router.post(
+    "/test-jobs",
+    response_model=APIResponse,
+    summary="取得專案測試工作列表"
+)
+async def list_test_jobs(
+    request: TestJobsRequest,
+    auth: AuthInfo = Depends(get_auth_info),
+    client: SAFClient = Depends(get_saf_client)
+):
+    """
+    取得指定專案的所有測試工作列表
+    
+    透過專案 ID 查詢該專案下所有的測試工作詳細資訊。
+    
+    **Request Body:**
+    - **project_ids**: 專案 ID 列表 (必填)
+    - **test_tool_key**: 測試工具 Key (可選，用於篩選)
+    
+    **回應欄位說明：**
+    - **test_job_id**: 測試工作 ID
+    - **fw**: 韌體版本
+    - **test_plan_name**: 測試計畫名稱
+    - **test_category_name**: 測試類別名稱
+    - **root_id**: Root ID
+    - **test_item_name**: 測試項目名稱
+    - **test_status**: 測試狀態 (Pass/Fail)
+    - **sample_id**: 樣品 ID
+    - **capacity**: 容量
+    - **platform**: 測試平台
+    - **test_tool_key_list**: 測試工具 Key 列表
+    
+    需要在 Header 中提供認證資訊：
+    - **Authorization**: 使用者 ID (從登入 API 取得)
+    - **Authorization-Name**: 使用者名稱 (從登入 API 取得)
+    """
+    try:
+        # 呼叫 SAF API
+        raw_data = await client.list_all_test_jobs(
+            user_id=auth.user_id,
+            username=auth.username,
+            project_ids=request.project_ids,
+            test_tool_key=request.test_tool_key
+        )
+        
+        # 轉換資料格式
+        test_jobs = raw_data.get("testJobs", [])
+        transformed_jobs = [_transform_test_job_item(job) for job in test_jobs]
+        
+        result = {
+            "test_jobs": transformed_jobs,
+            "total": len(transformed_jobs)
         }
         
         return format_response(

@@ -433,5 +433,34 @@ class TestStatusSearchResponse(BaseModel):
     size: int = Field(50, description="每頁筆數")
 
 
+# ========== Test Jobs 相關 ==========
+
+class TestJobsRequest(BaseModel):
+    """測試工作列表請求"""
+    project_ids: List[str] = Field(..., description="專案 ID 列表")
+    test_tool_key: str = Field("", description="測試工具 Key (可選)")
+
+
+class TestJobItem(BaseModel):
+    """測試工作項目"""
+    test_job_id: str = Field(..., description="測試工作 ID")
+    fw: str = Field("", description="韌體版本")
+    test_plan_name: str = Field("", description="測試計畫名稱")
+    test_category_name: str = Field("", description="測試類別名稱")
+    root_id: str = Field("", description="Root ID")
+    test_item_name: str = Field("", description="測試項目名稱")
+    test_status: str = Field("", description="測試狀態")
+    sample_id: str = Field("", description="樣品 ID")
+    capacity: str = Field("", description="容量")
+    platform: str = Field("", description="測試平台")
+    test_tool_key_list: List[str] = Field(default_factory=list, description="測試工具 Key 列表")
+
+
+class TestJobsResponse(BaseModel):
+    """測試工作列表回應"""
+    test_jobs: List[TestJobItem] = Field(default_factory=list, description="測試工作列表")
+    total: int = Field(0, description="總筆數")
+
+
 # 解決 Project 自我參照
 Project.model_rebuild()

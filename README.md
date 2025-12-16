@@ -81,6 +81,7 @@ docker-compose down
 | `/api/v1/projects/{project_id}/dashboard` | GET | 取得專案儀表板 |
 | `/api/v1/projects/known-issues` | POST | 取得 Known Issues 列表 |
 | `/api/v1/projects/test-status/search` | POST | 搜尋測試狀態 |
+| `/api/v1/projects/test-jobs` | POST | 取得專案測試工作列表 |
 
 詳細 API 使用說明請參考 [docs/API.md](docs/API.md)。
 

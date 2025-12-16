@@ -529,6 +529,88 @@ class SAFClient(LoggerMixin):
             self.logger.error(f"Timeout error: {e}")
             raise SAFConnectionError(f"Connection timeout: {e}")
 
+    @retry(max_attempts=3, delay=1.0, exceptions=(httpx.ConnectError, httpx.TimeoutException))
+    @log_execution
+    async def list_all_test_jobs(
+        self,
+        user_id: int,
+        username: str,
+        project_ids: List[str],
+        test_tool_key: str = ""
+    ) -> Dict[str, Any]:
+        """
+        取得專案的所有測試工作列表
+        
+        Args:
+            user_id: 使用者 ID (從登入取得)
+            username: 使用者名稱 (從登入取得)
+            project_ids: 專案 ID 列表
+            test_tool_key: 測試工具 Key (可選)
+            
+        Returns:
+            包含測試工作列表的字典，格式如:
+            {
+                "testJobs": [
+                    {
+                        "testJobId": "...",
+                        "fw": "...",
+                        "testPlanName": "...",
+                        "testCategoryName": "...",
+                        "rootId": "...",
+                        "testItemName": "...",
+                        "testStatus": "...",
+                        "sampleId": "...",
+                        "capacity": "...",
+                        "platform": "...",
+                        "testToolKeyList": [...]
+                    },
+                    ...
+                ]
+            }
+            
+        Raises:
+            SAFAPIError: API 呼叫失敗
+            SAFConnectionError: 連線失敗
+        """
+        url = f"{self.settings.saf_api_base_url}/record/ListAllTestJobs"
+        self.logger.debug(f"Getting all test jobs from: {url}")
+        
+        headers = {
+            "Accept": "application/json, text/plain, */*",
+            "Content-Type": "application/json",
+            "Authorization": str(user_id),
+            "Authorization_name": username,
+        }
+        
+        try:
+            async with self._get_client() as client:
+                response = await client.post(
+                    url,
+                    headers=headers,
+                    json={
+                        "projectIds": project_ids,
+                        "testToolKey": test_tool_key,
+                    },
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    jobs_count = len(data.get("testJobs", []))
+                    self.logger.info(f"Retrieved {jobs_count} test jobs")
+                    return data
+                else:
+                    raise SAFAPIError(
+                        f"Failed to get test jobs: {response.status_code}",
+                        status_code=response.status_code
+                    )
+                    
+        except httpx.ConnectError as e:
+            self.logger.error(f"Connection error: {e}")
+            raise SAFConnectionError(f"Failed to connect to SAF: {e}")
+        except httpx.TimeoutException as e:
+            self.logger.error(f"Timeout error: {e}")
+            raise SAFConnectionError(f"Connection timeout: {e}")
+
 
 # 建立預設客戶端實例
 saf_client = SAFClient()
