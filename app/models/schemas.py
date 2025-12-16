@@ -388,5 +388,50 @@ class KnownIssueListResponse(BaseModel):
     total: int = Field(0, description="總筆數")
 
 
+# ========== Test Status 搜尋相關 ==========
+
+class TestStatusSearchRequest(BaseModel):
+    """測試狀態搜尋請求"""
+    query: str = Field(..., description="查詢條件，格式: 欄位名 = \"值\"")
+    page: int = Field(1, ge=1, description="頁碼")
+    size: int = Field(50, ge=1, le=100, description="每頁筆數")
+    sort: Optional[Dict[str, Any]] = Field(default_factory=dict, description="排序條件")
+
+
+class TestStatusItem(BaseModel):
+    """測試狀態項目"""
+    test_job_id: str = Field(..., description="測試工作 ID")
+    is_notification: bool = Field(False, description="是否發送通知")
+    test_item: str = Field(..., description="測試項目名稱")
+    test_status: str = Field(..., description="測試狀態")
+    all_status: List[str] = Field(default_factory=list, description="所有可能的狀態值")
+    sample_id: str = Field(..., description="樣品 ID")
+    platform: str = Field("", description="測試平台")
+    position: str = Field("", description="測試位置")
+    mainboard_manufacturer: str = Field("", description="主機板製造商")
+    mainboard_model: str = Field("", description="主機板型號")
+    project_name: str = Field("", description="專案名稱")
+    fw: str = Field("", description="韌體版本")
+    duration: int = Field(0, description="測試持續時間 (秒)")
+    start_time: Optional[str] = Field(None, description="開始時間")
+    end_time: Optional[str] = Field(None, description="結束時間")
+    user: str = Field("", description="執行測試的使用者")
+    updated_at: Optional[str] = Field(None, description="更新時間")
+    log_path: str = Field("", description="測試日誌路徑")
+    driver: str = Field("", description="驅動程式")
+    filesystem: str = Field("", description="檔案系統")
+    slot: str = Field("", description="插槽類型")
+    aspm: str = Field("", description="ASPM 設定")
+    os_name: str = Field("", description="作業系統名稱")
+
+
+class TestStatusSearchResponse(BaseModel):
+    """測試狀態搜尋回應"""
+    items: List[TestStatusItem] = Field(default_factory=list, description="測試狀態列表")
+    total: int = Field(0, description="總筆數")
+    page: int = Field(1, description="頁碼")
+    size: int = Field(50, description="每頁筆數")
+
+
 # 解決 Project 自我參照
 Project.model_rebuild()

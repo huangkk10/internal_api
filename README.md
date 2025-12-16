@@ -80,6 +80,7 @@ docker-compose down
 | `/api/v1/projects/{project_uid}/test-details` | GET | 取得測試項目詳細資料 |
 | `/api/v1/projects/{project_id}/dashboard` | GET | 取得專案儀表板 |
 | `/api/v1/projects/known-issues` | POST | 取得 Known Issues 列表 |
+| `/api/v1/projects/test-status/search` | POST | 搜尋測試狀態 |
 
 詳細 API 使用說明請參考 [docs/API.md](docs/API.md)。
 
@@ -99,6 +100,24 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 curl http://localhost:8080/api/v1/projects \
   -H "Authorization: 150" \
   -H "Authorization-Name: your_username"
+```
+
+### 搜尋測試狀態
+
+```bash
+# 依專案名稱搜尋
+curl -X POST http://localhost:8080/api/v1/projects/test-status/search \
+  -H "Content-Type: application/json" \
+  -H "Authorization: 150" \
+  -H "Authorization-Name: your_username" \
+  -d '{"query": "new_project_name = \"Client_PCIe_Micron_Springsteen_SM2508_Micron B68S TLC\"", "page": 1, "size": 50}'
+
+# 依測試狀態搜尋
+curl -X POST http://localhost:8080/api/v1/projects/test-status/search \
+  -H "Content-Type: application/json" \
+  -H "Authorization: 150" \
+  -H "Authorization-Name: your_username" \
+  -d '{"query": "testStatus = \"PASS\"", "page": 1, "size": 10}'
 ```
 
 ## 測試

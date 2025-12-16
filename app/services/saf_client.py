@@ -182,6 +182,82 @@ class SAFClient(LoggerMixin):
 
     @retry(max_attempts=3, delay=1.0, exceptions=(httpx.ConnectError, httpx.TimeoutException))
     @log_execution
+    async def search_test_status(
+        self,
+        user_id: int,
+        username: str,
+        query: str,
+        page: int = 1,
+        size: int = 50,
+        sort: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        搜尋測試狀態
+        
+        Args:
+            user_id: 使用者 ID (從登入取得)
+            username: 使用者名稱 (從登入取得)
+            query: 查詢條件，格式: 欄位名 = "值"
+            page: 頁碼
+            size: 每頁筆數
+            sort: 排序條件
+            
+        Returns:
+            包含測試狀態列表的字典，格式如:
+            {
+                "items": [...],
+                "total": 100,
+                "page": 1,
+                "size": 50
+            }
+            
+        Raises:
+            SAFAPIError: API 呼叫失敗
+            SAFConnectionError: 連線失敗
+        """
+        url = f"{self.settings.saf_api_base_url}/status"
+        self.logger.debug(f"Searching test status from: {url}")
+        
+        headers = {
+            "Accept": "application/json, text/plain, */*",
+            "Content-Type": "application/json",
+            "Authorization": str(user_id),
+            "Authorization_name": username,
+        }
+        
+        try:
+            async with self._get_client() as client:
+                response = await client.post(
+                    f"{url}?page={page}&size={size}",
+                    headers=headers,
+                    json={
+                        "userId": user_id,
+                        "q": query,
+                        "sort": sort or {},
+                    },
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    items_count = len(data.get("items", []))
+                    total = data.get("total", 0)
+                    self.logger.info(f"Retrieved {items_count} test status items (total: {total})")
+                    return data
+                else:
+                    raise SAFAPIError(
+                        f"Failed to search test status: {response.status_code}",
+                        status_code=response.status_code
+                    )
+                    
+        except httpx.ConnectError as e:
+            self.logger.error(f"Connection error: {e}")
+            raise SAFConnectionError(f"Failed to connect to SAF: {e}")
+        except httpx.TimeoutException as e:
+            self.logger.error(f"Timeout error: {e}")
+            raise SAFConnectionError(f"Connection timeout: {e}")
+
+    @retry(max_attempts=3, delay=1.0, exceptions=(httpx.ConnectError, httpx.TimeoutException))
+    @log_execution
     async def get_fws_by_project_id(
         self,
         user_id: int,

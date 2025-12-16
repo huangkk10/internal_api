@@ -863,6 +863,163 @@ curl -X POST "http://localhost:8080/api/v1/projects/known-issues?show_disable=fa
 
 ---
 
+### 9. 搜尋測試狀態
+
+搜尋 SAF 測試狀態，支援依專案名稱、測試狀態等條件查詢測試工作的詳細資訊。
+
+```
+POST /api/v1/projects/test-status/search
+```
+
+**Request Body:**
+
+| 欄位 | 類型 | 必填 | 說明 |
+|------|------|------|------|
+| `query` | string | 是 | 查詢條件，格式: `欄位名 = "值"` |
+| `page` | int | 否 | 頁碼 (預設 1) |
+| `size` | int | 否 | 每頁筆數 (預設 50，最大 100) |
+| `sort` | object | 否 | 排序條件 |
+
+**查詢語法範例:**
+
+| 查詢欄位 | 範例 | 說明 |
+|----------|------|------|
+| `new_project_name` | `new_project_name = "Client_PCIe_Micron_Springsteen_SM2508_Micron B68S TLC"` | 依完整專案名稱查詢 |
+| `projectName` | `projectName = "Springsteen"` | 依專案短名查詢 |
+| `testStatus` | `testStatus = "PASS"` | 依測試狀態查詢 |
+| `sampleId` | `sampleId = "SSD-X-05498"` | 依樣品 ID 查詢 |
+
+**Headers:**
+
+| Header | 必填 | 說明 |
+|--------|------|------|
+| Authorization | 是 | 使用者 ID |
+| Authorization-Name | 是 | 使用者名稱 |
+
+**回應欄位:**
+
+| 區塊 | 欄位 | 說明 |
+|------|------|------|
+| (root) | `items` | 測試狀態列表 |
+| | `total` | 總筆數 |
+| | `page` | 目前頁碼 |
+| | `size` | 每頁筆數 |
+| **items[]** | `test_job_id` | 測試工作 ID |
+| | `is_notification` | 是否發送通知 |
+| | `test_item` | 測試項目名稱 |
+| | `test_status` | 測試狀態 |
+| | `all_status` | 所有可能的狀態值 |
+| | `sample_id` | 樣品 ID |
+| | `platform` | 測試平台 |
+| | `position` | 測試位置 |
+| | `mainboard_manufacturer` | 主機板製造商 |
+| | `mainboard_model` | 主機板型號 |
+| | `project_name` | 專案名稱 |
+| | `fw` | 韌體版本 |
+| | `duration` | 測試持續時間 (秒) |
+| | `start_time` | 開始時間 |
+| | `end_time` | 結束時間 |
+| | `user` | 執行測試的使用者 |
+| | `updated_at` | 更新時間 |
+| | `log_path` | 測試日誌路徑 |
+| | `driver` | 驅動程式 |
+| | `filesystem` | 檔案系統 |
+| | `slot` | 插槽類型 |
+| | `aspm` | ASPM 設定 |
+| | `os_name` | 作業系統名稱 |
+
+**測試狀態說明:**
+
+| 狀態 | 說明 |
+|------|------|
+| `PASS` | 通過 |
+| `FAIL` | 失敗 |
+| `ONGOING` | 進行中 |
+| `CANCEL` | 取消 |
+| `CHECK` | 待確認 |
+| `INTERRUPT` | 中斷 |
+| `CONDITIONAL PASS` | 條件通過 |
+| `QUEUED` | 排隊中 |
+
+**cURL 範例:**
+
+```bash
+# 依專案名稱搜尋
+curl -X POST "http://localhost:8080/api/v1/projects/test-status/search" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: 150" \
+  -H "Authorization-Name: your_username" \
+  -d '{
+    "query": "new_project_name = \"Client_PCIe_Micron_Springsteen_SM2508_Micron B68S TLC\"",
+    "page": 1,
+    "size": 50
+  }'
+
+# 依測試狀態搜尋
+curl -X POST "http://localhost:8080/api/v1/projects/test-status/search" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: 150" \
+  -H "Authorization-Name: your_username" \
+  -d '{
+    "query": "testStatus = \"PASS\"",
+    "page": 1,
+    "size": 10
+  }'
+
+# 依樣品 ID 搜尋
+curl -X POST "http://localhost:8080/api/v1/projects/test-status/search" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: 150" \
+  -H "Authorization-Name: your_username" \
+  -d '{
+    "query": "sampleId = \"SSD-X-05498\"",
+    "page": 1,
+    "size": 20
+  }'
+```
+
+**回應範例:**
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "test_job_id": "f30964a6da3f11f08e7e0242ac280004",
+        "is_notification": true,
+        "test_item": "Primary Drive Firmware Upgrade Check",
+        "test_status": "PASS",
+        "all_status": ["CHECK", "PASS", "FAIL", "INTERRUPT", "ONGOING", "CANCEL", "CONDITIONAL PASS"],
+        "sample_id": "SSD-X-05498",
+        "platform": "NB-SSD-0736",
+        "position": "SAF1001-0736",
+        "mainboard_manufacturer": "Dell",
+        "mainboard_model": "Latitude 5420",
+        "project_name": "Springsteen",
+        "fw": "GB10YCFS",
+        "duration": 7200,
+        "start_time": "2025-12-16T02:00:00+00:00",
+        "end_time": "2025-12-16T04:00:00+00:00",
+        "user": "tk.chang",
+        "updated_at": "2025-12-16T05:27:44+00:00",
+        "log_path": "/SAF_Workspace/prod/test_log/...",
+        "driver": "Microsoft",
+        "filesystem": "NTFS",
+        "slot": "M.2",
+        "aspm": "Default",
+        "os_name": "Windows11 x64 23H2 (OS Build 22631.4169)"
+      }
+    ],
+    "total": 50612,
+    "page": 1,
+    "size": 50
+  },
+  "timestamp": "2025-12-16T06:00:00Z"
+}
+```
+
+---
+
 ## 錯誤回應
 
 所有錯誤都會返回統一的格式：

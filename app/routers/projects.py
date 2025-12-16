@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.config import Settings, get_settings
-from app.models.schemas import APIResponse, AuthInfo, ProjectListResponse
+from app.models.schemas import APIResponse, AuthInfo, ProjectListResponse, TestStatusSearchRequest
 from app.routers.auth import get_auth_info
 from app.services.saf_client import SAFClient
 from lib.exceptions import SAFAPIError, SAFConnectionError
@@ -1453,6 +1453,133 @@ async def get_known_issues(
         result = {
             "items": transformed_items,
             "total": len(transformed_items)
+        }
+        
+        return format_response(
+            success=True,
+            data=result
+        )
+        
+    except SAFAPIError as e:
+        logger.error(f"SAF API error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=format_response(
+                success=False,
+                message=str(e),
+                error_code="SAF_API_ERROR"
+            )
+        )
+    except SAFConnectionError as e:
+        logger.error(f"SAF connection error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=format_response(
+                success=False,
+                message="Unable to connect to SAF server",
+                error_code="CONNECTION_ERROR"
+            )
+        )
+
+
+def _transform_test_status_item(item: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    將 SAF 原始測試狀態資料轉換為 snake_case 格式
+    
+    Args:
+        item: SAF API 回傳的單一測試狀態資料
+        
+    Returns:
+        轉換後的測試狀態字典
+    """
+    return {
+        "test_job_id": item.get("testJobId", ""),
+        "is_notification": item.get("isNotification", False),
+        "test_item": item.get("testItem", ""),
+        "test_status": item.get("testStatus", ""),
+        "all_status": item.get("allStatus", []),
+        "sample_id": item.get("sampleId", ""),
+        "platform": item.get("platform", ""),
+        "position": item.get("position", ""),
+        "mainboard_manufacturer": item.get("mainboardManufacturer", ""),
+        "mainboard_model": item.get("mainboardModel", ""),
+        "project_name": item.get("projectName", ""),
+        "fw": item.get("fw", ""),
+        "duration": item.get("duration", 0),
+        "start_time": item.get("startTime"),
+        "end_time": item.get("endTime"),
+        "user": item.get("user", ""),
+        "updated_at": item.get("updatedAt"),
+        "log_path": item.get("logPath", ""),
+        "driver": item.get("driver", ""),
+        "filesystem": item.get("filesystem", ""),
+        "slot": item.get("slot", ""),
+        "aspm": item.get("aspm", ""),
+        "os_name": item.get("osName", ""),
+    }
+
+
+@router.post(
+    "/test-status/search",
+    response_model=APIResponse,
+    summary="搜尋測試狀態"
+)
+async def search_test_status(
+    request: TestStatusSearchRequest,
+    auth: AuthInfo = Depends(get_auth_info),
+    client: SAFClient = Depends(get_saf_client)
+):
+    """
+    搜尋 SAF 測試狀態
+    
+    透過查詢語法搜尋測試工作的詳細資訊，支援依專案名稱、測試狀態等條件查詢。
+    
+    **查詢語法範例：**
+    - `new_project_name = "Client_PCIe_Micron_Springsteen_SM2508_Micron B68S TLC"`
+    - `projectName = "Springsteen"`
+    - `testStatus = "PASS"`
+    - `sampleId = "SSD-X-05498"`
+    
+    **回應欄位說明：**
+    - **test_job_id**: 測試工作 ID
+    - **test_item**: 測試項目名稱
+    - **test_status**: 測試狀態 (PASS/FAIL/ONGOING/CANCEL/CHECK/INTERRUPT/CONDITIONAL PASS)
+    - **sample_id**: 樣品 ID
+    - **platform**: 測試平台
+    - **position**: 測試位置
+    - **project_name**: 專案名稱
+    - **fw**: 韌體版本
+    - **duration**: 測試持續時間 (秒)
+    - **start_time**: 開始時間
+    - **end_time**: 結束時間
+    - **user**: 執行測試的使用者
+    - **log_path**: 測試日誌路徑
+    - **os_name**: 作業系統名稱
+    
+    需要在 Header 中提供認證資訊：
+    - **Authorization**: 使用者 ID (從登入 API 取得)
+    - **Authorization-Name**: 使用者名稱 (從登入 API 取得)
+    """
+    try:
+        # 呼叫 SAF API
+        raw_data = await client.search_test_status(
+            user_id=auth.user_id,
+            username=auth.username,
+            query=request.query,
+            page=request.page,
+            size=request.size,
+            sort=request.sort
+        )
+        
+        # 轉換資料格式
+        items = raw_data.get("items", [])
+        transformed_items = [_transform_test_status_item(item) for item in items]
+        
+        result = {
+            "items": transformed_items,
+            "total": raw_data.get("total", 0),
+            "page": request.page,
+            "size": request.size
         }
         
         return format_response(
