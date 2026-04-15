@@ -907,15 +907,26 @@ POST /api/v1/projects/test-status/search
 | **items[]** | `test_job_id` | 測試工作 ID |
 | | `is_notification` | 是否發送通知 |
 | | `test_item` | 測試項目名稱 |
+| | `test_category_name` | 測試類別名稱 |
+| | `test_plan_name` | 測試計畫名稱 |
 | | `test_status` | 測試狀態 |
 | | `all_status` | 所有可能的狀態值 |
 | | `sample_id` | 樣品 ID |
+| | `capacity` | 容量 |
 | | `platform` | 測試平台 |
 | | `position` | 測試位置 |
 | | `mainboard_manufacturer` | 主機板製造商 |
 | | `mainboard_model` | 主機板型號 |
 | | `project_name` | 專案名稱 |
+| | `new_project_name` | 完整專案名稱 |
+| | `product_category` | 產品類別 |
+| | `customer` | 客戶 |
+| | `flash` | Flash 類型 |
+| | `controller` | 控制器 |
+| | `sub_version` | 子版本 |
 | | `fw` | 韌體版本 |
+| | `root_id` | Root ID |
+| | `task_id` | Task ID |
 | | `duration` | 測試持續時間 (秒) |
 | | `start_time` | 開始時間 |
 | | `end_time` | 結束時間 |
