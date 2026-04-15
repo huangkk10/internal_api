@@ -97,7 +97,7 @@ async def get_projects_summary(
             size=1000  # 取得所有專案以計算統計
         )
         
-        projects = result.get("data", [])
+        projects = result.get("items", [])
         
         # 計算統計
         customers = {}
